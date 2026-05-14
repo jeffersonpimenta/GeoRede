@@ -65,6 +65,9 @@ LAYER_ALIASES: dict[str, str] = {
     "UCBT_TAB": "UCBT",    # formato antigo com sufixo _tab
     "UCMT_TAB": "UCMT",
     "UCAT_TAB": "UCAT",
+    "UGBT_TAB": "UGBT",    # formato antigo (ex. Enel CE 2017)
+    "UGMT_TAB": "UGMT",
+    "UGAT_TAB": "UGAT",
 }
 
 
