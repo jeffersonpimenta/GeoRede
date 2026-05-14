@@ -13,10 +13,10 @@ CREATE TABLE rede_bt.seg_bt (
     fases         TEXT,        -- Fases condutoras: A, B, C, AB, ABC...
     condutor      TEXT,        -- Tipo de condutor
     ano_ref       INTEGER,     -- Ano de referência da BDGD
-    geom          GEOMETRY(LineString, 4674)
+    geom          GEOMETRY(MultiLineString, 4674)
 );
 
-COMMENT ON TABLE  rede_bt.seg_bt              IS 'Segmentos de rede de Baixa Tensão (RAMBT) — BDGD/ANEEL';
+COMMENT ON TABLE  rede_bt.seg_bt              IS 'Segmentos de rede de Baixa Tensão (SSDBT) — BDGD/ANEEL';
 COMMENT ON COLUMN rede_bt.seg_bt.cod_id       IS 'Código identificador único ANEEL';
 COMMENT ON COLUMN rede_bt.seg_bt.distribuidora IS 'Sigla da distribuidora (ex: ENEL_SP)';
 COMMENT ON COLUMN rede_bt.seg_bt.tensao_nom   IS 'Tensão nominal em kV';
@@ -41,10 +41,10 @@ CREATE TABLE rede_bt.seg_mt (
     fases         TEXT,
     condutor      TEXT,
     ano_ref       INTEGER,
-    geom          GEOMETRY(LineString, 4674)
+    geom          GEOMETRY(MultiLineString, 4674)
 );
 
-COMMENT ON TABLE  rede_bt.seg_mt              IS 'Segmentos de rede de Média Tensão (RAMMT) — BDGD/ANEEL';
+COMMENT ON TABLE  rede_bt.seg_mt              IS 'Segmentos de rede de Média Tensão (SSDMT) — BDGD/ANEEL';
 COMMENT ON COLUMN rede_bt.seg_mt.cod_id       IS 'Código identificador único ANEEL';
 COMMENT ON COLUMN rede_bt.seg_mt.distribuidora IS 'Sigla da distribuidora';
 COMMENT ON COLUMN rede_bt.seg_mt.tensao_nom   IS 'Tensão nominal em kV';
@@ -97,7 +97,7 @@ CREATE TABLE rede_bt.subestacao (
     tensao_sec    NUMERIC,     -- Tensão no secundário (kV)
     potencia_mva  NUMERIC,     -- Potência nominal (MVA)
     ano_ref       INTEGER,
-    geom          GEOMETRY(Point, 4674)
+    geom          GEOMETRY(Geometry, 4674)  -- Point (V11+) ou MultiLineString (formato antigo)
 );
 
 COMMENT ON TABLE  rede_bt.subestacao              IS 'Subestações de distribuição MT (SSDMT) — BDGD/ANEEL';
@@ -158,7 +158,8 @@ CREATE TABLE rede_bt.ingestao_log (
     status        TEXT,                               -- 'em_progresso', 'ok', 'erro'
     mensagem      TEXT,                               -- Mensagem de erro ou info adicional
     iniciado_em   TIMESTAMPTZ DEFAULT now(),
-    concluido_em  TIMESTAMPTZ
+    concluido_em  TIMESTAMPTZ,
+    UNIQUE (job_id, entidade)
 );
 
 COMMENT ON TABLE  rede_bt.ingestao_log              IS 'Log de jobs de ingestão BDGD';

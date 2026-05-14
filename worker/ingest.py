@@ -4,7 +4,7 @@ Worker de ingestão BDGD — invocado pela API como subprocess.
 Uso:
     python ingest.py \
         --url <url_gdb> \
-        --entidade TRAFO \
+        --entidade UNTRD \
         --distribuidora ENEL_SP \
         --ano 2024 \
         --job-id <uuid>
@@ -24,13 +24,22 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 
 # Mapeamento entidade BDGD → tabela PostGIS
 ENTIDADE_TABELA: dict[str, str] = {
-    "RAMBT":   "rede_bt.seg_bt",
-    "RAMMT":   "rede_bt.seg_mt",
-    "TRAFO":   "rede_bt.trafo",
-    "SSDMT":   "rede_bt.subestacao",
-    "UCBT_PJ": "rede_bt.consumidor_pj",
-    "UCMT_PJ": "rede_bt.consumidor_pj",
-    "UCAT_PJ": "rede_bt.consumidor_pj",
+    "SSDBT": "rede_bt.seg_bt",
+    "SSDMT": "rede_bt.seg_mt",
+    "UNTRD": "rede_bt.trafo",
+    "SUB":   "rede_bt.subestacao",
+    "UCBT":  "rede_bt.consumidor_pj",
+    "UCMT":  "rede_bt.consumidor_pj",
+    "UCAT":  "rede_bt.consumidor_pj",
+}
+
+# Nomes alternativos por versão do BDGD (formato antigo → entidade canónica)
+# Formatos anteriores a ~2020 usam nomes diferentes para algumas layers
+LAYER_ALIASES: dict[str, str] = {
+    "UNTRMT":   "UNTRD",   # nome antigo da unidade transformadora de distribuição
+    "UCBT_TAB": "UCBT",    # formato antigo com sufixo _tab
+    "UCMT_TAB": "UCMT",
+    "UCAT_TAB": "UCAT",
 }
 
 
@@ -77,6 +86,7 @@ def _log_init(job_id: str, distribuidora: str, ano_ref: int, entidades: list[str
                     INSERT INTO rede_bt.ingestao_log
                         (job_id, distribuidora, ano_ref, entidade, status)
                     VALUES (%s, %s, %s, %s, 'em_progresso')
+                    ON CONFLICT DO NOTHING
                     """,
                     (job_id, distribuidora, ano_ref, entidade),
                 )
@@ -158,10 +168,31 @@ def _layer_exists(gdb_path: Path, layer_name: str) -> bool:
     return result.returncode == 0
 
 
+def _list_layers(gdb_path: Path) -> list[str]:
+    # ogrinfo -ro (no layer arg) lists layers.
+    # GDAL ≥3.x: "Layer: NAME (type)"
+    # GDAL <3.x:  "N: NAME (type)"
+    result = subprocess.run(
+        ["ogrinfo", "-ro", str(gdb_path)],
+        capture_output=True, text=True,
+    )
+    layers = []
+    for line in result.stdout.splitlines():
+        if ": " not in line:
+            continue
+        if line.startswith("Layer: ") or (line[0].isdigit()):
+            name = line.split(": ", 1)[1].split(" (")[0].strip()
+            layers.append(name)
+    return layers
+
+
 # ─── ogr2ogr — ingerir entidade ──────────────────────────────────────────────
 
+_LINE_TABELAS = {"rede_bt.seg_bt", "rede_bt.seg_mt"}
+
+
 def _ogr2ogr(gdb_path: Path, entidade: str, tabela: str) -> tuple[bool, str]:
-    pg_dsn = DATABASE_URL.replace("postgresql://", "PG:", 1)
+    pg_dsn = "PG:" + DATABASE_URL
 
     cmd = [
         "ogr2ogr",
@@ -175,6 +206,10 @@ def _ogr2ogr(gdb_path: Path, entidade: str, tabela: str) -> tuple[bool, str]:
         "--config", "OGR_TRUNCATE", "NO",
         "--config", "PG_USE_COPY", "YES",
     ]
+
+    # Segmentos de rede podem ser LineString ou MultiLineString conforme versão BDGD
+    if tabela in _LINE_TABELAS:
+        cmd += ["-nlt", "PROMOTE_TO_MULTI"]
 
     print(f"[ogr2ogr] {entidade} → {tabela}", flush=True)
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -206,10 +241,30 @@ def ingest_entidade(
 
     # Validar layer no .gdb
     if not _layer_exists(gdb_path, entidade):
-        msg = f"Layer '{entidade}' não encontrada no ficheiro .gdb."
-        print(f"[ingest] AVISO: {msg}", flush=True)
-        _log_update(job_id, entidade, "erro", msg)
-        return False
+        available = _list_layers(gdb_path)
+        available_upper = {l.upper(): l for l in available}
+
+        # 1. Case-insensitive exact match
+        match = available_upper.get(entidade.upper())
+        if match and match != entidade:
+            print(f"[ingest] AVISO: Layer '{entidade}' → usando '{match}' (nome real no .gdb)", flush=True)
+            entidade = match
+        else:
+            # 2. Try known version aliases: find if any available layer maps to this entidade
+            alias_match = next(
+                (real for real, canonical in LAYER_ALIASES.items()
+                 if canonical == entidade and real in available_upper),
+                None,
+            )
+            if alias_match:
+                real_name = available_upper[alias_match]
+                print(f"[ingest] AVISO: Layer '{entidade}' → usando alias '{real_name}' (formato BDGD antigo)", flush=True)
+                entidade = real_name
+            else:
+                msg = f"Layer '{entidade}' não encontrada no ficheiro .gdb. Layers disponíveis: {available}"
+                print(f"[ingest] AVISO: {msg}", flush=True)
+                _log_update(job_id, entidade, "erro", msg)
+                return False
 
     # Executar ogr2ogr
     ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela)
@@ -227,12 +282,17 @@ def ingest_entidade(
 
 def main():
     parser = argparse.ArgumentParser(description="Worker de ingestão BDGD")
-    parser.add_argument("--url", required=True, help="URL do ficheiro .gdb")
+    parser.add_argument("--url", default=None, help="URL do ficheiro .gdb")
+    parser.add_argument("--local-path", default=None, dest="local_path",
+                        help="Caminho local para o ficheiro .gdb/.zip (ignora --url, para testes)")
     parser.add_argument("--entidades", required=True, help="Entidades separadas por vírgula: RAMBT,TRAFO")
     parser.add_argument("--distribuidora", required=True)
     parser.add_argument("--ano", required=True, type=int)
     parser.add_argument("--job-id", required=True, dest="job_id")
     args = parser.parse_args()
+
+    if not args.url and not args.local_path:
+        parser.error("É necessário --url ou --local-path")
 
     entidades = [e.strip() for e in args.entidades.split(",") if e.strip()]
     tmp_dir = Path(f"/tmp/ingest/{args.job_id}")
@@ -245,15 +305,22 @@ def main():
     # Registar todas as entidades como em_progresso
     _log_init(args.job_id, args.distribuidora, args.ano, entidades)
 
-    # Download único (partilhado por todas as entidades)
-    try:
-        _download(args.url, download_path)
-    except Exception as exc:
-        msg = f"Falha no download: {exc}"
-        print(f"[worker] ERRO: {msg}", flush=True)
-        for entidade in entidades:
-            _log_update(args.job_id, entidade, "erro", msg)
-        sys.exit(1)
+    if args.local_path:
+        # Modo teste: usar ficheiro local, sem download
+        import shutil as _shutil
+        local = Path(args.local_path)
+        print(f"[worker] modo local: {local}", flush=True)
+        _shutil.copy2(local, download_path)
+    else:
+        # Download único (partilhado por todas as entidades)
+        try:
+            _download(args.url, download_path)
+        except Exception as exc:
+            msg = f"Falha no download: {exc}"
+            print(f"[worker] ERRO: {msg}", flush=True)
+            for entidade in entidades:
+                _log_update(args.job_id, entidade, "erro", msg)
+            sys.exit(1)
 
     # Detectar e extrair .zip se necessário
     gdb_path = _extract_gdb(download_path, tmp_dir)

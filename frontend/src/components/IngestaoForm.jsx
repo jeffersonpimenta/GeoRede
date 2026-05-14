@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { getDistribuidoras } from '../services/api'
 
 const ENTIDADES = [
-  { codigo: 'RAMBT',   descricao: 'Rede de Baixa Tensão' },
-  { codigo: 'RAMMT',   descricao: 'Rede de Média Tensão' },
-  { codigo: 'TRAFO',   descricao: 'Transformadores' },
-  { codigo: 'SSDMT',   descricao: 'Subestações MT' },
-  { codigo: 'UCBT_PJ', descricao: 'Consumidores BT (PJ)' },
-  { codigo: 'UCMT_PJ', descricao: 'Consumidores MT (PJ)' },
-  { codigo: 'UCAT_PJ', descricao: 'Consumidores AT (PJ)' },
+  { codigo: 'SSDBT', descricao: 'Rede de Baixa Tensão (Segmentos BT)' },
+  { codigo: 'SSDMT', descricao: 'Rede de Média Tensão (Segmentos MT)' },
+  { codigo: 'UNTRD', descricao: 'Transformadores de Distribuição' },
+  { codigo: 'SUB',   descricao: 'Subestações' },
+  { codigo: 'UCBT',  descricao: 'Consumidores BT' },
+  { codigo: 'UCMT',  descricao: 'Consumidores MT' },
+  { codigo: 'UCAT',  descricao: 'Consumidores AT' },
 ]
 
 const ANOS = [2024, 2023, 2022, 2021]
@@ -31,7 +31,7 @@ export default function IngestaoForm({ onSubmit, disabled }) {
   const [sigla, setSigla] = useState('')
   const [urlGdb, setUrlGdb] = useState('')
   const [ano, setAno] = useState(2024)
-  const [entidades, setEntidades] = useState(['RAMBT', 'RAMMT', 'TRAFO'])
+  const [entidades, setEntidades] = useState(['SSDBT', 'SSDMT', 'UNTRD'])
 
   useEffect(() => {
     getDistribuidoras()

@@ -202,7 +202,7 @@ DISTRIBUIDORAS: list[dict] = [
     },
 ]
 
-ENTIDADES_VALIDAS = {"RAMBT", "RAMMT", "TRAFO", "SSDMT", "UCBT_PJ", "UCMT_PJ", "UCAT_PJ"}
+ENTIDADES_VALIDAS = {"SSDBT", "SSDMT", "UNTRD", "SUB", "UCBT", "UCMT", "UCAT"}
 
 
 @router.get("/distribuidoras", response_model=List[DistribuidoraInfo])
