@@ -13,6 +13,14 @@ CREATE TABLE rede_bt.seg_bt (
     fases         TEXT,        -- Fases condutoras: A, B, C, AB, ABC...
     condutor      TEXT,        -- Tipo de condutor
     ano_ref       INTEGER,     -- Ano de referência da BDGD
+    -- FK / contexto BDGD
+    ctmt          TEXT,        -- Circuito MT ao qual pertence
+    uni_tr_d      TEXT,        -- Transformador distribuição (FK → trafo.cod_id)
+    pac_1         TEXT,        -- Ponto de acesso 1
+    pac_2         TEXT,        -- Ponto de acesso 2
+    tipo_cabo     TEXT,        -- Tipo de cabo
+    fas_con       TEXT,        -- Fases condutoras (detalhe BDGD)
+    tip_rede      TEXT,        -- Tipo de rede (aérea, subterrânea, etc.)
     geom          GEOMETRY(MultiLineString, 4674)
 );
 
@@ -27,6 +35,7 @@ COMMENT ON COLUMN rede_bt.seg_bt.geom         IS 'Geometria LineString — SIRGA
 CREATE INDEX ON rede_bt.seg_bt USING GIST (geom);
 CREATE INDEX ON rede_bt.seg_bt (distribuidora);
 CREATE INDEX ON rede_bt.seg_bt (ano_ref);
+CREATE INDEX ON rede_bt.seg_bt (uni_tr_d);
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -41,6 +50,13 @@ CREATE TABLE rede_bt.seg_mt (
     fases         TEXT,
     condutor      TEXT,
     ano_ref       INTEGER,
+    -- FK / contexto BDGD
+    ctmt          TEXT,        -- Circuito MT
+    pac_1         TEXT,
+    pac_2         TEXT,
+    tipo_cabo     TEXT,
+    fas_con       TEXT,
+    tip_rede      TEXT,
     geom          GEOMETRY(MultiLineString, 4674)
 );
 
@@ -68,6 +84,14 @@ CREATE TABLE rede_bt.trafo (
     tensao_prim   NUMERIC,     -- Tensão no primário (kV)
     tensao_sec    NUMERIC,     -- Tensão no secundário (kV)
     ano_ref       INTEGER,
+    -- FK / contexto BDGD
+    ctmt          TEXT,
+    pac_1         TEXT,
+    pac_2         TEXT,
+    sub_gd        TEXT,        -- Subestação (FK → subestacao.cod_id)
+    fas_con       TEXT,
+    tip_trf       TEXT,        -- Tipo de transformador
+    mun_id        TEXT,        -- Município
     geom          GEOMETRY(Point, 4674)
 );
 
@@ -83,6 +107,7 @@ COMMENT ON COLUMN rede_bt.trafo.geom         IS 'Geometria Point — SIRGAS 2000
 CREATE INDEX ON rede_bt.trafo USING GIST (geom);
 CREATE INDEX ON rede_bt.trafo (distribuidora);
 CREATE INDEX ON rede_bt.trafo (ano_ref);
+CREATE INDEX ON rede_bt.trafo (sub_gd);
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -97,6 +122,10 @@ CREATE TABLE rede_bt.subestacao (
     tensao_sec    NUMERIC,     -- Tensão no secundário (kV)
     potencia_mva  NUMERIC,     -- Potência nominal (MVA)
     ano_ref       INTEGER,
+    -- FK / contexto BDGD
+    pac           TEXT,        -- Ponto de acesso
+    tip_sub       TEXT,        -- Tipo de subestação
+    dem_med       NUMERIC,     -- Demanda média (MVA)
     geom          GEOMETRY(Geometry, 4674)  -- Point (V11+) ou MultiLineString (formato antigo)
 );
 
@@ -127,6 +156,14 @@ CREATE TABLE rede_bt.consumidor_pj (
     demanda_kw    NUMERIC,     -- Demanda contratada (kW)
     consumo_mwh   NUMERIC,     -- Consumo anual (MWh)
     ano_ref       INTEGER,
+    -- FK / contexto BDGD
+    ctmt          TEXT,
+    uni_tr_d      TEXT,        -- Transformador distribuição (FK → trafo.cod_id)
+    pac           TEXT,
+    mun_id        TEXT,
+    tip_cc        TEXT,        -- Tipo de conexão
+    gru_ten       TEXT,        -- Grupo de tensão
+    dmcr          NUMERIC,     -- Demanda média calculada (kW)
     geom          GEOMETRY(Point, 4674)
 );
 
@@ -143,6 +180,7 @@ COMMENT ON COLUMN rede_bt.consumidor_pj.geom         IS 'Geometria Point — SIR
 CREATE INDEX ON rede_bt.consumidor_pj USING GIST (geom);
 CREATE INDEX ON rede_bt.consumidor_pj (distribuidora);
 CREATE INDEX ON rede_bt.consumidor_pj (ano_ref);
+CREATE INDEX ON rede_bt.consumidor_pj (uni_tr_d);
 
 
 -- ─────────────────────────────────────────────────────────────

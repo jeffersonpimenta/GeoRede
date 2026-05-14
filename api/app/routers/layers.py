@@ -127,3 +127,30 @@ async def get_feature(layer_id: str, feature_id: int, db: AsyncSession = Depends
     # Excluir coluna geom — desnecessária no popup (mapa já tem geometria via tile)
     data = {k: v for k, v in record.items() if k != "geom"}
     return FeatureDetail(**data)
+
+
+@router.get("/layers/{layer_id}/feature/by-cod-id/{cod_id}", response_model=FeatureDetail)
+async def get_feature_by_cod_id(layer_id: str, cod_id: str, db: AsyncSession = Depends(get_db)):
+    tabela = LAYER_TABLE_MAP.get(layer_id)
+    if tabela is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Layer '{layer_id}' não existe. Valores válidos: {list(LAYER_TABLE_MAP)}",
+        )
+
+    # tabela vem da whitelist interna — seguro interpolar no SQL
+    # cod_id é passado como parâmetro vinculado — sem risco de injecção
+    row = await db.execute(
+        text(f"SELECT * FROM {tabela} WHERE cod_id = :cod_id LIMIT 1"),
+        {"cod_id": cod_id},
+    )
+    record = row.mappings().one_or_none()
+
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Feature cod_id='{cod_id}' não encontrado em '{layer_id}'.",
+        )
+
+    data = {k: v for k, v in record.items() if k != "geom"}
+    return FeatureDetail(**data)

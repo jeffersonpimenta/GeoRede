@@ -36,6 +36,26 @@ class FeatureDetail(BaseModel):
     classe: Optional[str] = None
     demanda_kw: Optional[float] = None
     consumo_mwh: Optional[float] = None
+    # FK / contexto BDGD (seg_bt, seg_mt, trafo, consumidor_pj)
+    ctmt: Optional[str] = None
+    uni_tr_d: Optional[str] = None
+    pac_1: Optional[str] = None
+    pac_2: Optional[str] = None
+    tipo_cabo: Optional[str] = None
+    fas_con: Optional[str] = None
+    tip_rede: Optional[str] = None
+    # trafo FK
+    sub_gd: Optional[str] = None
+    tip_trf: Optional[str] = None
+    mun_id: Optional[str] = None
+    # subestacao
+    pac: Optional[str] = None
+    tip_sub: Optional[str] = None
+    dem_med: Optional[float] = None
+    # consumidor_pj FK
+    tip_cc: Optional[str] = None
+    gru_ten: Optional[str] = None
+    dmcr: Optional[float] = None
 
 
 # ─── Ingestão ─────────────────────────────────────────────────────────────────

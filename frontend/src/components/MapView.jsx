@@ -112,6 +112,67 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
         map.setFilter(paintLayerId, null)
       }
     },
+
+    highlightFeature(layerId, codId) {
+      const map = mapRef.current
+      if (!map) return
+
+      // Remove previous highlight
+      if (map.getLayer('highlight-layer')) map.removeLayer('highlight-layer')
+      if (map.getSource('highlight-source')) map.removeSource('highlight-source')
+
+      const sourceId = `src-${layerId}`
+      if (!map.getSource(sourceId)) return  // layer not active on map
+
+      // Query vector tiles for matching feature
+      const features = map.querySourceFeatures(sourceId, {
+        sourceLayer: layerId,
+        filter: ['==', ['get', 'cod_id'], codId],
+      })
+
+      if (!features.length) return
+
+      const geomType = features[0].geometry.type
+      const isLine = geomType.includes('Line')
+      const isPoint = geomType.includes('Point')
+
+      map.addSource('highlight-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features },
+      })
+
+      if (isLine) {
+        map.addLayer({
+          id: 'highlight-layer',
+          type: 'line',
+          source: 'highlight-source',
+          paint: {
+            'line-color': '#FACC15',
+            'line-width': 4,
+            'line-opacity': 0.9,
+          },
+        })
+      } else if (isPoint) {
+        map.addLayer({
+          id: 'highlight-layer',
+          type: 'circle',
+          source: 'highlight-source',
+          paint: {
+            'circle-radius': 10,
+            'circle-color': 'rgba(0,0,0,0)',
+            'circle-stroke-width': 3,
+            'circle-stroke-color': '#FACC15',
+          },
+        })
+      }
+    },
+
+    clearHighlight() {
+      const map = mapRef.current
+      if (!map) return
+      if (map.getLayer('highlight-layer')) map.removeLayer('highlight-layer')
+      if (map.getSource('highlight-source')) map.removeSource('highlight-source')
+    },
   }))
 
   useEffect(() => {

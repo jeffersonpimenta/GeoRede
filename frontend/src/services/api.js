@@ -18,6 +18,10 @@ export function getFeature(layerId, featureId) {
   return apiFetch(`/layers/${layerId}/feature/${featureId}`)
 }
 
+export function getFeatureByCodId(layerId, codId) {
+  return apiFetch(`/layers/${layerId}/feature/by-cod-id/${encodeURIComponent(codId)}`)
+}
+
 // ─── Ingestão ─────────────────────────────────────────────────────────────────
 export function getDistribuidoras() {
   return apiFetch('/ingestao/distribuidoras')
