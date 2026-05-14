@@ -56,6 +56,40 @@ class FeatureDetail(BaseModel):
     tip_cc: Optional[str] = None
     gru_ten: Optional[str] = None
     dmcr: Optional[float] = None
+    # eq_corte
+    tip_eqp: Optional[str] = None
+    cap_int: Optional[float] = None
+    class_cont: Optional[str] = None
+    # geracao_dist
+    tip_gd: Optional[str] = None
+    pot_inst: Optional[float] = None
+    ceg_gd: Optional[str] = None
+    # ramal_lig
+    comp: Optional[float] = None
+    # ponto_notavel
+    tip_pnt: Optional[str] = None
+
+
+class SubestacaoEnergy(BaseModel):
+    id: int
+    cod_id: Optional[str] = None
+    distribuidora: Optional[str] = None
+    ano_ref: Optional[int] = None
+    sub_gd: Optional[str] = None
+    ene_01: Optional[float] = None
+    ene_02: Optional[float] = None
+    ene_03: Optional[float] = None
+    ene_04: Optional[float] = None
+    ene_05: Optional[float] = None
+    ene_06: Optional[float] = None
+    ene_07: Optional[float] = None
+    ene_08: Optional[float] = None
+    ene_09: Optional[float] = None
+    ene_10: Optional[float] = None
+    ene_11: Optional[float] = None
+    ene_12: Optional[float] = None
+    dem_max: Optional[float] = None
+    fp_med: Optional[float] = None
 
 
 # ─── Ingestão ─────────────────────────────────────────────────────────────────

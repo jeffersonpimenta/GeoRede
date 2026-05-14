@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.schemas import FeatureDetail, LayerInfo
+from app.models.schemas import FeatureDetail, LayerInfo, SubestacaoEnergy
 from app.services.db import get_db
 
 router = APIRouter(tags=["layers"])
@@ -20,6 +20,9 @@ LAYER_TABLE_MAP: dict[str, str] = {
     "trafo":         "rede_bt.trafo",
     "subestacao":    "rede_bt.subestacao",
     "consumidor_pj": "rede_bt.consumidor_pj",
+    "eq_corte":      "rede_bt.eq_corte",
+    "geracao_dist":  "rede_bt.geracao_dist",
+    "ramal_lig":     "rede_bt.ramal_lig",
 }
 
 # Lista estática de layers — só os metadados dinâmicos vêm da BD
@@ -53,6 +56,24 @@ LAYERS_CONFIG = [
         "nome": "Consumidores PJ",
         "tabela": "rede_bt.consumidor_pj",
         "tipo_geom": "Point",
+    },
+    {
+        "id": "eq_corte",
+        "nome": "Chaves/Religadores",
+        "tabela": "rede_bt.eq_corte",
+        "tipo_geom": "Point",
+    },
+    {
+        "id": "geracao_dist",
+        "nome": "Geração Distribuída",
+        "tabela": "rede_bt.geracao_dist",
+        "tipo_geom": "Point",
+    },
+    {
+        "id": "ramal_lig",
+        "nome": "Ramais de Ligação",
+        "tabela": "rede_bt.ramal_lig",
+        "tipo_geom": "LineString",
     },
 ]
 
@@ -99,6 +120,26 @@ async def list_layers(db: AsyncSession = Depends(get_db)):
         )
 
     return results
+
+
+@router.get("/layers/subestacao/energy/{cod_id}", response_model=SubestacaoEnergy)
+async def get_subestacao_energy(cod_id: str, db: AsyncSession = Depends(get_db)):
+    """Dados energéticos mensais de uma subestação (tabela ssdat)."""
+    row = await db.execute(
+        text(
+            "SELECT * FROM rede_bt.ssdat WHERE sub_gd = :cod_id ORDER BY ano_ref DESC LIMIT 1"
+        ),
+        {"cod_id": cod_id},
+    )
+    record = row.mappings().one_or_none()
+
+    if record is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dados energéticos para subestação '{cod_id}' não encontrados.",
+        )
+
+    return SubestacaoEnergy(**dict(record))
 
 
 @router.get("/layers/{layer_id}/feature/{feature_id}", response_model=FeatureDetail)

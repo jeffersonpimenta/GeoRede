@@ -11,6 +11,9 @@ const LAYER_STYLES = {
   trafo:         { type: 'circle', color: '#8B5CF6', radius: 5 },
   subestacao:    { type: 'circle', color: '#EF4444', radius: 7 },
   consumidor_pj: { type: 'circle', color: '#10B981', radius: 4 },
+  eq_corte:      { type: 'circle', color: '#FBBF24', radius: 6, minzoom: 12 },
+  geracao_dist:  { type: 'circle', color: '#84CC16', radius: 6, minzoom: 11 },
+  ramal_lig:     { type: 'line',   color: '#94A3B8', width: 1,  minzoom: 15 },
 }
 
 const TILE_URL = import.meta.env.VITE_TILE_URL || 'http://localhost:3000'

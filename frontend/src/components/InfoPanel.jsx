@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getFeature, getFeatureByCodId } from '../services/api'
+import { getFeature, getFeatureByCodId, getSubestacaoEnergy } from '../services/api'
 
 const LAYER_ICON = {
   seg_bt:        '〰️',
@@ -7,6 +7,9 @@ const LAYER_ICON = {
   trafo:         '🔌',
   subestacao:    '🏭',
   consumidor_pj: '🏢',
+  eq_corte:      '🔀',
+  geracao_dist:  '☀️',
+  ramal_lig:     '〰️',
 }
 
 const LAYER_NOME = {
@@ -15,6 +18,9 @@ const LAYER_NOME = {
   trafo:         'Transformador',
   subestacao:    'Subestação',
   consumidor_pj: 'Consumidor PJ',
+  eq_corte:      'Chave/Religador',
+  geracao_dist:  'Geração Distribuída',
+  ramal_lig:     'Ramal de Ligação',
 }
 
 // Campos navegáveis (FK): { [layerId]: { [fieldKey]: { layer, label } } }
@@ -24,6 +30,9 @@ const FK_LINKS = {
   trafo:         { sub_gd:   { layer: 'subestacao', label: 'Subestação' } },
   subestacao:    {},
   consumidor_pj: { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
+  eq_corte:      {},
+  geracao_dist:  { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
+  ramal_lig:     { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
 }
 
 const FIELDS = {
@@ -101,6 +110,42 @@ const FIELDS = {
     { key: 'dmcr',         label: 'Dem. média calc.', unit: ' kW', decimals: 1 },
     { key: 'ano_ref',      label: 'Ano ref.' },
   ],
+  eq_corte: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'tip_eqp',      label: 'Tipo equip.' },
+    { key: 'ten_nom',      label: 'Tensão nominal', unit: ' kV' },
+    { key: 'fas_con',      label: 'Fases' },
+    { key: 'cap_int',      label: 'Cap. interrupção', unit: ' kA' },
+    { key: 'class_cont',   label: 'Classe cont.' },
+    { key: 'ctmt',         label: 'Circuito MT' },
+    { key: 'pac_1',        label: 'PAC 1' },
+    { key: 'pac_2',        label: 'PAC 2' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  geracao_dist: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'tip_gd',       label: 'Tipo geração' },
+    { key: 'pot_inst',     label: 'Pot. instalada', unit: ' kW', decimals: 1 },
+    { key: 'nivel_tensao', label: 'Nível tensão' },
+    { key: 'ceg_gd',       label: 'CEG' },
+    { key: 'ctmt',         label: 'Circuito MT' },
+    { key: 'uni_tr_d',     label: 'Transformador' },
+    { key: 'pac',          label: 'PAC' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  ramal_lig: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'comp',         label: 'Comprimento', unit: ' m', decimals: 1 },
+    { key: 'tipo_cabo',    label: 'Tipo cabo' },
+    { key: 'ctmt',         label: 'Circuito MT' },
+    { key: 'uni_tr_d',     label: 'Transformador' },
+    { key: 'pac_1',        label: 'PAC 1' },
+    { key: 'pac_2',        label: 'PAC 2' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
 }
 
 function formatValue(val, field) {
@@ -154,6 +199,41 @@ const s = {
   },
   loading: { padding: 16, color: '#94a3b8', textAlign: 'center' },
   error: { padding: 16, color: '#ef4444', textAlign: 'center' },
+  energySection: { marginTop: 12, padding: '8px 0 0' },
+  energyHeading: { fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b', marginBottom: 8 },
+  energyBars: { display: 'flex', alignItems: 'flex-end', gap: 2, height: 40 },
+  energyBar: (pct, color) => ({
+    flex: 1, background: color || '#3B82F6', borderRadius: 2,
+    height: `${Math.max(pct * 100, 4)}%`, minHeight: 3,
+  }),
+  energyLabels: { display: 'flex', gap: 2, marginTop: 3 },
+  energyLabel: { flex: 1, fontSize: 9, color: '#94a3b8', textAlign: 'center' },
+  energyStats: { display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#64748b' },
+}
+
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+function EnergyChart({ energy }) {
+  const values = MONTHS.map((_, i) => energy[`ene_0${i < 9 ? i + 1 : ''}${i >= 9 ? i + 1 : ''}`] ?? null)
+    .map((v, i) => energy[`ene_${String(i + 1).padStart(2, '0')}`] ?? 0)
+  const max = Math.max(...values, 1)
+  return (
+    <div style={s.energySection}>
+      <div style={s.energyHeading}>Energia Mensal (MWh)</div>
+      <div style={s.energyBars}>
+        {values.map((v, i) => (
+          <div key={i} style={s.energyBar(v / max, '#3B82F6')} title={`${MONTHS[i]}: ${v?.toFixed(1) ?? '—'} MWh`} />
+        ))}
+      </div>
+      <div style={s.energyLabels}>
+        {MONTHS.map(m => <div key={m} style={s.energyLabel}>{m[0]}</div>)}
+      </div>
+      <div style={s.energyStats}>
+        {energy.dem_max != null && <span>Dem. máx: {Number(energy.dem_max).toFixed(2)} MVA</span>}
+        {energy.fp_med != null && <span>FP médio: {Number(energy.fp_med).toFixed(3)}</span>}
+      </div>
+    </div>
+  )
 }
 
 export default function InfoPanel({ target, onClose, onNavigate }) {
@@ -162,12 +242,14 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [energy, setEnergy] = useState(null)
 
   // Reset stack when target changes from outside (new map click)
   useEffect(() => {
     if (!target) {
       setNavStack([])
       setData(null)
+      setEnergy(null)
       return
     }
     setNavStack([{ layerId: target.layerId, featureId: target.featureId }])
@@ -175,18 +257,25 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
 
   // Fetch when navStack top changes
   useEffect(() => {
-    if (navStack.length === 0) { setData(null); return }
+    if (navStack.length === 0) { setData(null); setEnergy(null); return }
     const top = navStack[navStack.length - 1]
     setLoading(true)
     setError(null)
     setData(null)
+    setEnergy(null)
 
     const promise = top.codId
       ? getFeatureByCodId(top.layerId, top.codId)
       : getFeature(top.layerId, top.featureId)
 
     promise
-      .then(setData)
+      .then(result => {
+        setData(result)
+        // Fetch energy data for subestação
+        if (top.layerId === 'subestacao' && result.cod_id) {
+          getSubestacaoEnergy(result.cod_id).then(setEnergy).catch(() => null)
+        }
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [navStack])
@@ -250,6 +339,7 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
             </div>
           )
         })}
+        {energy && <EnergyChart energy={energy} />}
       </div>
     </div>
   )

@@ -10,7 +10,9 @@
 #   -d, --distribuidora  Sigla da distribuidora   (ex: ENEL_CE)
 #   -a, --ano            Ano de referência         (ex: 2017)
 #   -e, --entidades      Lista separada por vírgula (default: todas)
-#                        Valores: SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT
+#                        Geo:    SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT
+#                                EQCR,UGBT,UGMT,UGAT,RAMLIG,PONNOT
+#                        Não-geo: SSDAT,CTMT,SEGCON
 #       --clean-only     Apenas limpa dados; não ingere
 #       --no-confirm     Não pede confirmação antes de truncar
 #
@@ -34,7 +36,7 @@ err()  { echo -e "${RED}[erro]${NC} $*" >&2; exit 1; }
 GDB_FILE=""
 DISTRIBUIDORA=""
 ANO=""
-ENTIDADES="SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT"
+ENTIDADES="SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT,EQCR,UGBT,UGMT,UGAT,RAMLIG,PONNOT,SSDAT,CTMT,SEGCON"
 CLEAN_ONLY=false
 NO_CONFIRM=false
 
@@ -77,7 +79,9 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${BOLD}  GeoRede — Re-ingestão de dados${NC}"
 echo -e "${BOLD}════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  Tabelas a limpar: ${YELLOW}seg_bt, seg_mt, trafo, subestacao, consumidor_pj, ingestao_log${NC}"
+echo -e "  Tabelas a limpar: ${YELLOW}seg_bt, seg_mt, trafo, subestacao, consumidor_pj,${NC}"
+echo -e "                    ${YELLOW}eq_corte, geracao_dist, ramal_lig, ponto_notavel,${NC}"
+echo -e "                    ${YELLOW}ssdat, ctmt_dados, segcon, ingestao_log${NC}"
 if ! $CLEAN_ONLY; then
   echo -e "  Ficheiro:         ${CYAN}$GDB_FILE${NC}"
   echo -e "  Distribuidora:    ${CYAN}$DISTRIBUIDORA${NC}"
@@ -103,6 +107,13 @@ docker compose exec -T db psql \
       rede_bt.trafo,
       rede_bt.subestacao,
       rede_bt.consumidor_pj,
+      rede_bt.eq_corte,
+      rede_bt.geracao_dist,
+      rede_bt.ramal_lig,
+      rede_bt.ponto_notavel,
+      rede_bt.ssdat,
+      rede_bt.ctmt_dados,
+      rede_bt.segcon,
       rede_bt.ingestao_log
     RESTART IDENTITY;
   "

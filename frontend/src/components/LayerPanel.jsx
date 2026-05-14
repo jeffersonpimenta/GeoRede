@@ -7,6 +7,9 @@ const LAYER_COLORS = {
   trafo:         '#8B5CF6',
   subestacao:    '#EF4444',
   consumidor_pj: '#10B981',
+  eq_corte:      '#FBBF24',
+  geracao_dist:  '#84CC16',
+  ramal_lig:     '#94A3B8',
 }
 
 const s = {

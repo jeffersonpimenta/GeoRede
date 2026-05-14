@@ -24,13 +24,38 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 
 # Mapeamento entidade BDGD → tabela PostGIS
 ENTIDADE_TABELA: dict[str, str] = {
-    "SSDBT": "rede_bt.seg_bt",
-    "SSDMT": "rede_bt.seg_mt",
-    "UNTRD": "rede_bt.trafo",
-    "SUB":   "rede_bt.subestacao",
-    "UCBT":  "rede_bt.consumidor_pj",
-    "UCMT":  "rede_bt.consumidor_pj",
-    "UCAT":  "rede_bt.consumidor_pj",
+    "SSDBT":  "rede_bt.seg_bt",
+    "SSDMT":  "rede_bt.seg_mt",
+    "UNTRD":  "rede_bt.trafo",
+    "SUB":    "rede_bt.subestacao",
+    "UCBT":   "rede_bt.consumidor_pj",
+    "UCMT":   "rede_bt.consumidor_pj",
+    "UCAT":   "rede_bt.consumidor_pj",
+    # Tier 1 — novas layers visuais
+    "EQCR":   "rede_bt.eq_corte",
+    "UGBT":   "rede_bt.geracao_dist",
+    "UGMT":   "rede_bt.geracao_dist",
+    "UGAT":   "rede_bt.geracao_dist",
+    "RAMLIG": "rede_bt.ramal_lig",
+    "PONNOT": "rede_bt.ponto_notavel",
+    # Tier 2 — enriquecimento (sem geometria)
+    "SSDAT":  "rede_bt.ssdat",
+    "CTMT":   "rede_bt.ctmt_dados",
+    "SEGCON": "rede_bt.segcon",
+}
+
+# Tabelas sem geometria — ogr2ogr usa -nlt NONE
+_NOGEO_TABELAS: set[str] = {
+    "rede_bt.ssdat",
+    "rede_bt.ctmt_dados",
+    "rede_bt.segcon",
+}
+
+# Entidades que partilham tabela — nível de tensão injectado como campo extra
+_NIVEL_TENSAO_MAP: dict[str, str] = {
+    "UGBT": "BT",
+    "UGMT": "MT",
+    "UGAT": "AT",
 }
 
 # Nomes alternativos por versão do BDGD (formato antigo → entidade canónica)
@@ -188,28 +213,45 @@ def _list_layers(gdb_path: Path) -> list[str]:
 
 # ─── ogr2ogr — ingerir entidade ──────────────────────────────────────────────
 
-_LINE_TABELAS = {"rede_bt.seg_bt", "rede_bt.seg_mt"}
+_LINE_TABELAS = {"rede_bt.seg_bt", "rede_bt.seg_mt", "rede_bt.ramal_lig"}
 
 
-def _ogr2ogr(gdb_path: Path, entidade: str, tabela: str) -> tuple[bool, str]:
+def _ogr2ogr(
+    gdb_path: Path,
+    entidade: str,
+    tabela: str,
+    nivel_tensao: str | None = None,
+) -> tuple[bool, str]:
     pg_dsn = "PG:" + DATABASE_URL
+    no_geo = tabela in _NOGEO_TABELAS
 
     cmd = [
         "ogr2ogr",
         "-f", "PostgreSQL",
         pg_dsn,
         str(gdb_path),
-        entidade,
+    ]
+
+    # Para entidades que partilham tabela, injectar campo nivel_tensao via -sql
+    if nivel_tensao:
+        cmd += ["-sql", f"SELECT *, '{nivel_tensao}' AS nivel_tensao FROM {entidade}"]
+    else:
+        cmd.append(entidade)
+
+    cmd += [
         "-nln", tabela,
-        "-t_srs", "EPSG:4674",
         "-append",
         "--config", "OGR_TRUNCATE", "NO",
         "--config", "PG_USE_COPY", "YES",
     ]
 
-    # Segmentos de rede podem ser LineString ou MultiLineString conforme versão BDGD
-    if tabela in _LINE_TABELAS:
-        cmd += ["-nlt", "PROMOTE_TO_MULTI"]
+    if no_geo:
+        cmd += ["-nlt", "NONE"]
+    else:
+        cmd += ["-t_srs", "EPSG:4674"]
+        if tabela in _LINE_TABELAS:
+            # Segmentos e ramais podem ser LineString ou MultiLineString conforme versão BDGD
+            cmd += ["-nlt", "PROMOTE_TO_MULTI"]
 
     print(f"[ogr2ogr] {entidade} → {tabela}", flush=True)
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -234,6 +276,7 @@ def ingest_entidade(
     gdb_path: Path,
 ) -> bool:
     """Ingere uma entidade BDGD. Retorna True se bem-sucedido."""
+    entidade_orig = entidade  # preservar para lookups após resolução de aliases
     tabela = ENTIDADE_TABELA.get(entidade)
     if tabela is None:
         _log_update(job_id, entidade, "erro", f"Entidade '{entidade}' não reconhecida.")
@@ -266,8 +309,9 @@ def ingest_entidade(
                 _log_update(job_id, entidade, "erro", msg)
                 return False
 
-    # Executar ogr2ogr
-    ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela)
+    # Executar ogr2ogr (injecta nivel_tensao para UGBT/UGMT/UGAT)
+    nivel_tensao = _NIVEL_TENSAO_MAP.get(entidade_orig)
+    ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela, nivel_tensao=nivel_tensao)
 
     if ok:
         n = _count_inserted(tabela, job_id)

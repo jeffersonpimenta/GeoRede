@@ -92,3 +92,54 @@ sources:
       - classe
       - demanda_kw
       - ano_ref
+
+  eq_corte:
+    schema: rede_bt
+    table: eq_corte
+    srid: 4674
+    geometry_column: geom
+    id_column: id
+    minzoom: 12
+    maxzoom: 22
+    properties:
+      - cod_id
+      - distribuidora
+      - tip_eqp
+      - fas_con
+      - ten_nom
+      - cap_int
+      - ctmt
+      - ano_ref
+
+  geracao_dist:
+    schema: rede_bt
+    table: geracao_dist
+    srid: 4674
+    geometry_column: geom
+    id_column: id
+    minzoom: 11
+    maxzoom: 22
+    properties:
+      - cod_id
+      - distribuidora
+      - tip_gd
+      - pot_inst
+      - nivel_tensao
+      - ctmt
+      - ano_ref
+
+  ramal_lig:
+    schema: rede_bt
+    table: ramal_lig
+    srid: 4674
+    geometry_column: geom
+    id_column: id
+    minzoom: 15
+    maxzoom: 22
+    properties:
+      - cod_id
+      - distribuidora
+      - comp
+      - tipo_cabo
+      - uni_tr_d
+      - ano_ref
