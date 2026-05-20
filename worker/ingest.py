@@ -24,31 +24,77 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 
 # Mapeamento entidade BDGD → tabela PostGIS
 ENTIDADE_TABELA: dict[str, str] = {
+    # ── Rede (com geometria) ─────────────────────────────────
     "SSDBT":  "rede_bt.seg_bt",
     "SSDMT":  "rede_bt.seg_mt",
-    "UNTRD":  "rede_bt.trafo",
+    "SSDAT":  "rede_bt.seg_at",       # SSDAT tem segmentos AT no GDB (com geom)
     "SUB":    "rede_bt.subestacao",
+    "UNTRD":  "rede_bt.trafo",
+    "UNTRS":  "rede_bt.trafo_sub",
+    # ── Consumidores (com geometria) ─────────────────────────
     "UCBT":   "rede_bt.consumidor_pj",
     "UCMT":   "rede_bt.consumidor_pj",
     "UCAT":   "rede_bt.consumidor_pj",
-    # Tier 1 — novas layers visuais
+    # ── Equipamentos / geração (com geometria) ───────────────
     "EQCR":   "rede_bt.eq_corte",
     "UGBT":   "rede_bt.geracao_dist",
     "UGMT":   "rede_bt.geracao_dist",
     "UGAT":   "rede_bt.geracao_dist",
     "RAMLIG": "rede_bt.ramal_lig",
     "PONNOT": "rede_bt.ponto_notavel",
-    # Tier 2 — enriquecimento (sem geometria)
-    "SSDAT":  "rede_bt.ssdat",
+    # ── Fase 2 — novas layers geográficas ────────────────────
+    "ARAT":   "rede_bt.area_atendimento",
+    "CONJ":   "rede_bt.conjunto",
+    "UNSEMT": "rede_bt.unidade_seg_mt",
+    "UNSEAT": "rede_bt.unidade_seg_at",
+    "UNCRMT": "rede_bt.unidade_rede_mt",
+    "UNREMT": "rede_bt.unidade_rede_est_mt",
+    # ── Fase 2/3 — enriquecimento (sem geometria) ────────────
     "CTMT":   "rede_bt.ctmt_dados",
     "SEGCON": "rede_bt.segcon",
+    "CTAT":   "rede_bt.ctat_dados",
+    "BAR":    "rede_bt.barra",
+    "BAY":    "rede_bt.bay",
+    "EQTRD":  "rede_bt.eq_trafo_dist",
+    "EQTRM":  "rede_bt.eq_trafo_mt",
+    "EQTRS":  "rede_bt.eq_trafo_sub",
+    "EQSIAT": "rede_bt.eq_siat",
+    "EQTRSX": "rede_bt.eq_trsx",
+    "EQRE":   "rede_bt.eq_regulador",
+    "EQSE":   "rede_bt.eq_seccionamento",
+    "EQME":   "rede_bt.eq_medidor",
+    "PIP":    "rede_bt.pip",
+    # ── Fase 4 — dashboard ───────────────────────────────────
+    "BE":     "rede_bt.balanco_energia",
+    "EP":     "rede_bt.energia_propria",
+    "PT":     "rede_bt.perda_tecnica",
+    "PNT":    "rede_bt.perda_nao_tecnica",
+    "INDGER": "rede_bt.indicador_gestao",
+    "BASE":   "rede_bt.base_metadata",
 }
 
-# Tabelas sem geometria — ogr2ogr usa -nlt NONE
+# Tabelas declaradamente sem geometria — fallback quando detecção adaptativa não é possível
 _NOGEO_TABELAS: set[str] = {
-    "rede_bt.ssdat",
     "rede_bt.ctmt_dados",
     "rede_bt.segcon",
+    "rede_bt.ctat_dados",
+    "rede_bt.barra",
+    "rede_bt.bay",
+    "rede_bt.eq_trafo_dist",
+    "rede_bt.eq_trafo_mt",
+    "rede_bt.eq_trafo_sub",
+    "rede_bt.eq_siat",
+    "rede_bt.eq_trsx",
+    "rede_bt.eq_regulador",
+    "rede_bt.eq_seccionamento",
+    "rede_bt.eq_medidor",
+    "rede_bt.pip",
+    "rede_bt.balanco_energia",
+    "rede_bt.energia_propria",
+    "rede_bt.perda_tecnica",
+    "rede_bt.perda_nao_tecnica",
+    "rede_bt.indicador_gestao",
+    "rede_bt.base_metadata",
 }
 
 # Entidades que partilham tabela — nível de tensão injectado como campo extra
@@ -68,6 +114,7 @@ LAYER_ALIASES: dict[str, str] = {
     "UGBT_TAB": "UGBT",    # formato antigo (ex. Enel CE 2017)
     "UGMT_TAB": "UGMT",
     "UGAT_TAB": "UGAT",
+    "UNTRAT":   "UNTRS",   # alias para trafo de subestação
 }
 
 
@@ -214,9 +261,29 @@ def _list_layers(gdb_path: Path) -> list[str]:
     return layers
 
 
+def _detect_geom_type(gdb_path: Path, layer_name: str) -> str | None:
+    """Detecta tipo de geometria de um layer via ogrinfo -so.
+
+    Retorna tipo de geometria (e.g. 'Point', 'Multi Line String', 'None')
+    ou None se não conseguir detectar.
+    """
+    result = subprocess.run(
+        ["ogrinfo", "-ro", "-so", str(gdb_path), layer_name],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return None
+    for line in result.stdout.splitlines():
+        if "Geometry:" in line:
+            geom_type = line.split("Geometry:", 1)[1].strip()
+            return geom_type
+    return None
+
+
 # ─── ogr2ogr — ingerir entidade ──────────────────────────────────────────────
 
-_LINE_TABELAS = {"rede_bt.seg_bt", "rede_bt.seg_mt", "rede_bt.ramal_lig"}
+_LINE_TABELAS = {"rede_bt.seg_bt", "rede_bt.seg_mt", "rede_bt.seg_at", "rede_bt.ramal_lig"}
+_POLYGON_TABELAS = {"rede_bt.area_atendimento", "rede_bt.conjunto", "rede_bt.subestacao"}
 
 
 def _ogr2ogr(
@@ -224,9 +291,10 @@ def _ogr2ogr(
     entidade: str,
     tabela: str,
     nivel_tensao: str | None = None,
+    force_no_geo: bool = False,
 ) -> tuple[bool, str]:
     pg_dsn = "PG:" + DATABASE_URL
-    no_geo = tabela in _NOGEO_TABELAS
+    no_geo = force_no_geo or tabela in _NOGEO_TABELAS
 
     cmd = [
         "ogr2ogr",
@@ -253,10 +321,11 @@ def _ogr2ogr(
     else:
         cmd += ["-t_srs", "EPSG:4674"]
         if tabela in _LINE_TABELAS:
-            # Segmentos e ramais podem ser LineString ou MultiLineString conforme versão BDGD
+            cmd += ["-nlt", "PROMOTE_TO_MULTI"]
+        elif tabela in _POLYGON_TABELAS:
             cmd += ["-nlt", "PROMOTE_TO_MULTI"]
 
-    print(f"[ogr2ogr] {entidade} → {tabela}", flush=True)
+    print(f"[ogr2ogr] {entidade} → {tabela}{' (no-geo)' if no_geo else ''}", flush=True)
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
@@ -312,9 +381,16 @@ def ingest_entidade(
                 _log_update(job_id, entidade, "erro", msg)
                 return False
 
+    # Detecção adaptativa de geometria
+    force_no_geo = False
+    geom_type = _detect_geom_type(gdb_path, entidade)
+    if geom_type and geom_type.lower() in ("none", "unknown (any)"):
+        print(f"[ingest] Layer '{entidade}' sem geometria no GDB — usando -nlt NONE", flush=True)
+        force_no_geo = True
+
     # Executar ogr2ogr (injecta nivel_tensao para UGBT/UGMT/UGAT)
     nivel_tensao = _NIVEL_TENSAO_MAP.get(entidade_orig)
-    ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela, nivel_tensao=nivel_tensao)
+    ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela, nivel_tensao=nivel_tensao, force_no_geo=force_no_geo)
 
     if ok:
         n = _count_inserted(tabela, job_id)

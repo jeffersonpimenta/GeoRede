@@ -68,6 +68,20 @@ class FeatureDetail(BaseModel):
     comp: Optional[float] = None
     # ponto_notavel
     tip_pnt: Optional[str] = None
+    # campos genéricos presentes em várias entidades
+    ten_nom: Optional[float] = None
+    # trafo_sub
+    pot_nom: Optional[float] = None
+    ten_pri: Optional[float] = None
+    ten_sec: Optional[float] = None
+    # conjunto
+    nom: Optional[str] = None
+    des_conj: Optional[str] = None
+    # perdas (unidade_seg_mt/at, unidade_rede_mt, unidade_rede_est_mt)
+    seg_id: Optional[str] = None
+    ene_per: Optional[float] = None
+    ene_sup: Optional[float] = None
+    ene_per_est: Optional[float] = None
 
 
 class SubestacaoEnergy(BaseModel):
@@ -90,6 +104,14 @@ class SubestacaoEnergy(BaseModel):
     ene_12: Optional[float] = None
     dem_max: Optional[float] = None
     fp_med: Optional[float] = None
+
+
+class TrafoConsumers(BaseModel):
+    total_consumidores: int
+    total_ramais: int
+    demanda_total_kw: float
+    consumo_total_mwh: float
+    classes: List[str]
 
 
 # ─── Ingestão ─────────────────────────────────────────────────────────────────

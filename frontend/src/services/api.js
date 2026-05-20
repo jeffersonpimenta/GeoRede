@@ -26,6 +26,45 @@ export function getSubestacaoEnergy(codId) {
   return apiFetch(`/layers/subestacao/energy/${encodeURIComponent(codId)}`)
 }
 
+export function getTrafoConsumers(codId) {
+  return apiFetch(`/layers/trafo/consumers/${encodeURIComponent(codId)}`)
+}
+
+// ─── Enriquecimento (Fase 3) ────────────────────────────────────────────────
+export function getSubestacaoDetails(codId) {
+  return apiFetch(`/layers/subestacao/details/${encodeURIComponent(codId)}`)
+}
+
+export function getTrafoDetails(codId) {
+  return apiFetch(`/layers/trafo/details/${encodeURIComponent(codId)}`)
+}
+
+export function getCtmtDetails(codId) {
+  return apiFetch(`/layers/ctmt/details/${encodeURIComponent(codId)}`)
+}
+
+export function getSegconLookup(codId) {
+  return apiFetch(`/layers/segcon/lookup/${encodeURIComponent(codId)}`)
+}
+
+// ─── Busca global (Fase 5) ──────────────────────────────────────────────────
+export function globalSearch(q) {
+  return apiFetch(`/search?q=${encodeURIComponent(q)}`)
+}
+
+// ─── Dashboard (Fase 4) ─────────────────────────────────────────────────────
+export function getDashboardSummary() {
+  return apiFetch('/dashboard/summary')
+}
+
+export function getEnergyBalance(distribuidora) {
+  return apiFetch(`/dashboard/energy-balance/${encodeURIComponent(distribuidora)}`)
+}
+
+export function getIndicators(distribuidora) {
+  return apiFetch(`/dashboard/indicators/${encodeURIComponent(distribuidora)}`)
+}
+
 // ─── Ingestão ─────────────────────────────────────────────────────────────────
 export function getDistribuidoras() {
   return apiFetch('/ingestao/distribuidoras')

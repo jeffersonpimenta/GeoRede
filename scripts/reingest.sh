@@ -10,9 +10,11 @@
 #   -d, --distribuidora  Sigla da distribuidora   (ex: ENEL_CE)
 #   -a, --ano            Ano de referência         (ex: 2017)
 #   -e, --entidades      Lista separada por vírgula (default: todas)
-#                        Geo:    SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT
-#                                EQCR,UGBT,UGMT,UGAT,RAMLIG,PONNOT
-#                        Não-geo: SSDAT,CTMT,SEGCON
+#                        Geo:    SSDBT,SSDMT,SSDAT,UNTRD,UNTRS,SUB,ARAT,CONJ
+#                                UCBT,UCMT,UCAT,EQCR,PONNOT,RAMLIG,UGBT,UGMT,UGAT
+#                                UNSEMT,UNSEAT,UNCRMT,UNREMT
+#                        Não-geo: CTMT,SEGCON,CTAT,BAR,BAY,EQTRD,EQTRM,EQTRS
+#                                EQSIAT,EQTRSX,EQRE,EQSE,EQME,PIP,BE,EP,PT,PNT,INDGER,BASE
 #       --clean-only     Apenas limpa dados; não ingere
 #       --no-confirm     Não pede confirmação antes de truncar
 #
@@ -36,7 +38,7 @@ err()  { echo -e "${RED}[erro]${NC} $*" >&2; exit 1; }
 GDB_FILE=""
 DISTRIBUIDORA=""
 ANO=""
-ENTIDADES="SSDBT,SSDMT,UNTRD,SUB,UCBT,UCMT,UCAT,EQCR,UGBT,UGMT,UGAT,RAMLIG,PONNOT,SSDAT,CTMT,SEGCON"
+ENTIDADES="SSDBT,SSDMT,SSDAT,UNTRD,UNTRS,SUB,ARAT,CONJ,UCBT,UCMT,UCAT,EQCR,PONNOT,RAMLIG,UGBT,UGMT,UGAT,UNSEMT,UNSEAT,UNCRMT,UNREMT,CTMT,SEGCON,CTAT,BAR,BAY,EQTRD,EQTRM,EQTRS,EQSIAT,EQTRSX,EQRE,EQSE,EQME,PIP,BE,EP,PT,PNT,INDGER,BASE"
 CLEAN_ONLY=false
 NO_CONFIRM=false
 
@@ -79,9 +81,15 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${BOLD}  GeoRede — Re-ingestão de dados${NC}"
 echo -e "${BOLD}════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  Tabelas a limpar: ${YELLOW}seg_bt, seg_mt, trafo, subestacao, consumidor_pj,${NC}"
+echo -e "  Tabelas a limpar: ${YELLOW}seg_bt, seg_mt, seg_at, trafo, trafo_sub, subestacao,${NC}"
+echo -e "                    ${YELLOW}area_atendimento, conjunto, consumidor_pj,${NC}"
 echo -e "                    ${YELLOW}eq_corte, geracao_dist, ramal_lig, ponto_notavel,${NC}"
-echo -e "                    ${YELLOW}ssdat, ctmt_dados, segcon, ingestao_log${NC}"
+echo -e "                    ${YELLOW}unidade_seg_mt, unidade_seg_at, unidade_rede_mt, unidade_rede_est_mt,${NC}"
+echo -e "                    ${YELLOW}ssdat, ctmt_dados, segcon, ctat_dados,${NC}"
+echo -e "                    ${YELLOW}barra, bay, eq_trafo_dist, eq_trafo_mt, eq_trafo_sub,${NC}"
+echo -e "                    ${YELLOW}eq_siat, eq_trsx, eq_regulador, eq_seccionamento, eq_medidor, pip,${NC}"
+echo -e "                    ${YELLOW}balanco_energia, energia_propria, perda_tecnica, perda_nao_tecnica,${NC}"
+echo -e "                    ${YELLOW}indicador_gestao, base_metadata, ingestao_log${NC}"
 if ! $CLEAN_ONLY; then
   echo -e "  Ficheiro:         ${CYAN}$GDB_FILE${NC}"
   echo -e "  Distribuidora:    ${CYAN}$DISTRIBUIDORA${NC}"
@@ -104,16 +112,42 @@ docker compose exec -T db psql \
     TRUNCATE TABLE
       rede_bt.seg_bt,
       rede_bt.seg_mt,
+      rede_bt.seg_at,
       rede_bt.trafo,
+      rede_bt.trafo_sub,
       rede_bt.subestacao,
+      rede_bt.area_atendimento,
+      rede_bt.conjunto,
       rede_bt.consumidor_pj,
       rede_bt.eq_corte,
       rede_bt.geracao_dist,
       rede_bt.ramal_lig,
       rede_bt.ponto_notavel,
+      rede_bt.unidade_seg_mt,
+      rede_bt.unidade_seg_at,
+      rede_bt.unidade_rede_mt,
+      rede_bt.unidade_rede_est_mt,
       rede_bt.ssdat,
       rede_bt.ctmt_dados,
       rede_bt.segcon,
+      rede_bt.ctat_dados,
+      rede_bt.barra,
+      rede_bt.bay,
+      rede_bt.eq_trafo_dist,
+      rede_bt.eq_trafo_mt,
+      rede_bt.eq_trafo_sub,
+      rede_bt.eq_siat,
+      rede_bt.eq_trsx,
+      rede_bt.eq_regulador,
+      rede_bt.eq_seccionamento,
+      rede_bt.eq_medidor,
+      rede_bt.pip,
+      rede_bt.balanco_energia,
+      rede_bt.energia_propria,
+      rede_bt.perda_tecnica,
+      rede_bt.perda_nao_tecnica,
+      rede_bt.indicador_gestao,
+      rede_bt.base_metadata,
       rede_bt.ingestao_log
     RESTART IDENTITY;
   "

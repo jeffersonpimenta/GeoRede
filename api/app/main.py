@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import ingestao, layers
+from app.routers import dashboard, ingestao, layers
 
 app = FastAPI(
     title="Mapa Rede BT — API",
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(layers.router, prefix="/api")
 app.include_router(ingestao.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
 
 
 @app.get("/health", tags=["infra"])

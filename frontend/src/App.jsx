@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import MapPage from './pages/MapPage'
 import IngestaoPage from './pages/IngestaoPage'
+import DashboardPage from './pages/DashboardPage'
 
 const TABS = [
   { id: 'mapa', label: 'Mapa' },
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'ingestao', label: 'Ingestão' },
 ]
 
@@ -28,6 +30,7 @@ const styles = {
     color: '#94a3b8',
     fontWeight: 500,
     fontSize: 14,
+    cursor: 'pointer',
     transition: 'color 0.15s, background 0.15s',
   },
   tabActive: {
@@ -59,6 +62,7 @@ export default function App() {
       </div>
       <div style={styles.content}>
         {activeTab === 'mapa' && <MapPage />}
+        {activeTab === 'dashboard' && <DashboardPage />}
         {activeTab === 'ingestao' && <IngestaoPage />}
       </div>
     </div>

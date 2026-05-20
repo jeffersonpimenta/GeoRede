@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import MapView from '../components/MapView'
 import LayerPanel from '../components/LayerPanel'
 import InfoPanel from '../components/InfoPanel'
+import SearchBar from '../components/SearchBar'
 
 export default function MapPage() {
   const mapRef = useRef(null)
@@ -46,6 +47,19 @@ export default function MapPage() {
     setPanelTarget(null)
   }
 
+  function handleSearchResult(item) {
+    // Open InfoPanel for search result
+    setPanelTarget({
+      layerId: item.layer_id,
+      featureId: item.id,
+      codId: item.cod_id,
+    })
+    // Highlight if layer active
+    if (activeLayers.includes(item.layer_id)) {
+      mapRef.current?.highlightFeature(item.layer_id, item.cod_id)
+    }
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <MapView
@@ -57,6 +71,7 @@ export default function MapPage() {
         onToggle={handleToggle}
         onFilterChange={handleFilterChange}
       />
+      <SearchBar onResult={handleSearchResult} />
       <InfoPanel
         target={panelTarget}
         onClose={handleClose}

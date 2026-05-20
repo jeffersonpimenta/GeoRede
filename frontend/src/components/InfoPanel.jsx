@@ -1,38 +1,69 @@
 import { useEffect, useState } from 'react'
-import { getFeature, getFeatureByCodId, getSubestacaoEnergy } from '../services/api'
+import {
+  getFeature, getFeatureByCodId,
+  getSubestacaoEnergy, getTrafoConsumers,
+  getSubestacaoDetails, getTrafoDetails, getCtmtDetails,
+} from '../services/api'
 
 const LAYER_ICON = {
-  seg_bt:        '〰️',
-  seg_mt:        '⚡',
-  trafo:         '🔌',
-  subestacao:    '🏭',
-  consumidor_pj: '🏢',
-  eq_corte:      '🔀',
-  geracao_dist:  '☀️',
-  ramal_lig:     '〰️',
+  seg_bt:              '〰️',
+  seg_mt:              '⚡',
+  seg_at:              '⚡',
+  trafo:               '🔌',
+  trafo_sub:           '🔌',
+  subestacao:          '🏭',
+  consumidor_pj:       '🏢',
+  eq_corte:            '🔀',
+  geracao_dist:        '☀️',
+  ramal_lig:           '〰️',
+  ponto_notavel:       '📍',
+  area_atendimento:    '🗺️',
+  conjunto:            '📐',
+  unidade_seg_mt:      '📊',
+  unidade_seg_at:      '📊',
+  unidade_rede_mt:     '📊',
+  unidade_rede_est_mt: '📊',
 }
 
 const LAYER_NOME = {
-  seg_bt:        'Rede Baixa Tensão',
-  seg_mt:        'Rede Média Tensão',
-  trafo:         'Transformador',
-  subestacao:    'Subestação',
-  consumidor_pj: 'Consumidor PJ',
-  eq_corte:      'Chave/Religador',
-  geracao_dist:  'Geração Distribuída',
-  ramal_lig:     'Ramal de Ligação',
+  seg_bt:              'Rede Baixa Tensão',
+  seg_mt:              'Rede Média Tensão',
+  seg_at:              'Rede Alta Tensão',
+  trafo:               'Transformador',
+  trafo_sub:           'Trafo Subestação',
+  subestacao:          'Subestação',
+  consumidor_pj:       'Consumidor PJ',
+  eq_corte:            'Chave/Religador',
+  geracao_dist:        'Geração Distribuída',
+  ramal_lig:           'Ramal de Ligação',
+  ponto_notavel:       'Ponto Notável',
+  area_atendimento:    'Área de Atendimento',
+  conjunto:            'Conjunto',
+  unidade_seg_mt:      'Perdas Seg. MT',
+  unidade_seg_at:      'Perdas Seg. AT',
+  unidade_rede_mt:     'Perdas Rede MT',
+  unidade_rede_est_mt: 'Perdas Est. MT',
 }
 
 // Campos navegáveis (FK): { [layerId]: { [fieldKey]: { layer, label } } }
 const FK_LINKS = {
-  seg_bt:        { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
+  seg_bt:        { uni_tr_d: { layer: 'trafo', label: 'Transformador' } },
   seg_mt:        {},
-  trafo:         { sub_gd:   { layer: 'subestacao', label: 'Subestação' } },
+  seg_at:        {},
+  trafo:         { sub_gd: { layer: 'subestacao', label: 'Subestação' } },
+  trafo_sub:     { sub_gd: { layer: 'subestacao', label: 'Subestação' } },
   subestacao:    {},
-  consumidor_pj: { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
+  consumidor_pj: { uni_tr_d: { layer: 'trafo', label: 'Transformador' } },
   eq_corte:      {},
-  geracao_dist:  { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
-  ramal_lig:     { uni_tr_d: { layer: 'trafo',      label: 'Transformador' } },
+  geracao_dist:  { uni_tr_d: { layer: 'trafo', label: 'Transformador' } },
+  ramal_lig:     { uni_tr_d: { layer: 'trafo', label: 'Transformador' } },
+  ponto_notavel: {},
+  area_atendimento: {},
+  conjunto:      {},
+  unidade_seg_mt:      { seg_id: { layer: 'seg_mt', label: 'Segmento MT' } },
+  unidade_seg_at:      { seg_id: { layer: 'seg_at', label: 'Segmento AT' } },
+  unidade_rede_mt:     { sub_gd: { layer: 'subestacao', label: 'Subestação' } },
+  unidade_rede_est_mt: { sub_gd: { layer: 'subestacao', label: 'Subestação' } },
 }
 
 const FIELDS = {
@@ -67,6 +98,18 @@ const FIELDS = {
     { key: 'tip_rede',     label: 'Tipo rede' },
     { key: 'ano_ref',      label: 'Ano ref.' },
   ],
+  seg_at: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'ctmt',         label: 'Circuito' },
+    { key: 'pac_1',        label: 'PAC 1' },
+    { key: 'pac_2',        label: 'PAC 2' },
+    { key: 'fas_con',      label: 'Fases con.' },
+    { key: 'tipo_cabo',    label: 'Tipo cabo' },
+    { key: 'comp',         label: 'Comprimento', unit: ' m', decimals: 1 },
+    { key: 'tip_rede',     label: 'Tipo rede' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
   trafo: [
     { key: 'cod_id',       label: 'Código' },
     { key: 'distribuidora',label: 'Distribuidora' },
@@ -80,6 +123,16 @@ const FIELDS = {
     { key: 'fas_con',      label: 'Fases con.' },
     { key: 'tip_trf',      label: 'Tipo trafo' },
     { key: 'mun_id',       label: 'Município' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  trafo_sub: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'pot_nom',      label: 'Potência', unit: ' kVA' },
+    { key: 'ten_pri',      label: 'Tensão Prim.', unit: ' kV' },
+    { key: 'ten_sec',      label: 'Tensão Sec.', unit: ' kV' },
+    { key: 'sub_gd',       label: 'Subestação' },
+    { key: 'fas_con',      label: 'Fases con.' },
     { key: 'ano_ref',      label: 'Ano ref.' },
   ],
   subestacao: [
@@ -146,6 +199,59 @@ const FIELDS = {
     { key: 'pac_2',        label: 'PAC 2' },
     { key: 'ano_ref',      label: 'Ano ref.' },
   ],
+  ponto_notavel: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'tip_pnt',      label: 'Tipo' },
+    { key: 'ctmt',         label: 'Circuito MT' },
+    { key: 'pac',          label: 'PAC' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  area_atendimento: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  conjunto: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'nom',          label: 'Nome' },
+    { key: 'des_conj',     label: 'Descrição' },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  unidade_seg_mt: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'seg_id',       label: 'Segmento' },
+    { key: 'ene_per',      label: 'Energia perdas', unit: ' MWh', decimals: 2 },
+    { key: 'ene_sup',      label: 'Energia suprida', unit: ' MWh', decimals: 2 },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  unidade_seg_at: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'seg_id',       label: 'Segmento' },
+    { key: 'ene_per',      label: 'Energia perdas', unit: ' MWh', decimals: 2 },
+    { key: 'ene_sup',      label: 'Energia suprida', unit: ' MWh', decimals: 2 },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  unidade_rede_mt: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'sub_gd',       label: 'Subestação' },
+    { key: 'ctmt',         label: 'Circuito MT' },
+    { key: 'ene_per',      label: 'Energia perdas', unit: ' MWh', decimals: 2 },
+    { key: 'ene_sup',      label: 'Energia suprida', unit: ' MWh', decimals: 2 },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
+  unidade_rede_est_mt: [
+    { key: 'cod_id',       label: 'Código' },
+    { key: 'distribuidora',label: 'Distribuidora' },
+    { key: 'sub_gd',       label: 'Subestação' },
+    { key: 'ene_per_est',  label: 'Energia perdas est.', unit: ' MWh', decimals: 2 },
+    { key: 'ene_sup',      label: 'Energia suprida', unit: ' MWh', decimals: 2 },
+    { key: 'ano_ref',      label: 'Ano ref.' },
+  ],
 }
 
 function formatValue(val, field) {
@@ -160,7 +266,7 @@ const s = {
     position: 'fixed',
     top: 0,
     right: 0,
-    width: 320,
+    width: 340,
     height: '100vh',
     zIndex: 30,
     background: '#fff',
@@ -209,20 +315,35 @@ const s = {
   energyLabels: { display: 'flex', gap: 2, marginTop: 3 },
   energyLabel: { flex: 1, fontSize: 9, color: '#94a3b8', textAlign: 'center' },
   energyStats: { display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#64748b' },
+  consumersSection: { marginTop: 12, padding: '8px 0 0', borderTop: '1px solid #e2e8f0' },
+  consumersHeading: { fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#64748b', marginBottom: 8 },
+  consumersGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 },
+  consumersCard: { background: '#f8fafc', borderRadius: 6, padding: '6px 8px', textAlign: 'center' },
+  consumersNum: { fontWeight: 700, fontSize: 16, color: '#1e293b' },
+  consumersLabel: { fontSize: 10, color: '#64748b', marginTop: 2 },
+  consumersClasses: { marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 },
+  consumersTag: { background: '#e0e7ff', color: '#3730a3', borderRadius: 4, padding: '2px 6px', fontSize: 10, fontWeight: 600 },
+  detailSection: { marginTop: 12, padding: '8px 0 0', borderTop: '1px solid #e2e8f0' },
+  detailHeading: {
+    fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1,
+    color: '#64748b', marginBottom: 6, cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
+  },
+  detailTable: { width: '100%', fontSize: 11, borderCollapse: 'collapse' },
+  detailTh: { textAlign: 'left', padding: '2px 4px', borderBottom: '1px solid #e2e8f0', color: '#94a3b8', fontWeight: 600 },
+  detailTd: { padding: '2px 4px', borderBottom: '1px solid #f8fafc' },
 }
 
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-function EnergyChart({ energy }) {
-  const values = MONTHS.map((_, i) => energy[`ene_0${i < 9 ? i + 1 : ''}${i >= 9 ? i + 1 : ''}`] ?? null)
-    .map((v, i) => energy[`ene_${String(i + 1).padStart(2, '0')}`] ?? 0)
+function EnergyChart({ energy, title, color }) {
+  const values = MONTHS.map((_, i) => energy[`ene_${String(i + 1).padStart(2, '0')}`] ?? 0)
   const max = Math.max(...values, 1)
   return (
     <div style={s.energySection}>
-      <div style={s.energyHeading}>Energia Mensal (MWh)</div>
+      <div style={s.energyHeading}>{title || 'Energia Mensal (MWh)'}</div>
       <div style={s.energyBars}>
         {values.map((v, i) => (
-          <div key={i} style={s.energyBar(v / max, '#3B82F6')} title={`${MONTHS[i]}: ${v?.toFixed(1) ?? '—'} MWh`} />
+          <div key={i} style={s.energyBar(v / max, color || '#3B82F6')} title={`${MONTHS[i]}: ${v?.toFixed(1) ?? '—'} MWh`} />
         ))}
       </div>
       <div style={s.energyLabels}>
@@ -231,8 +352,150 @@ function EnergyChart({ energy }) {
       <div style={s.energyStats}>
         {energy.dem_max != null && <span>Dem. máx: {Number(energy.dem_max).toFixed(2)} MVA</span>}
         {energy.fp_med != null && <span>FP médio: {Number(energy.fp_med).toFixed(3)}</span>}
+        {energy.dem_max_p != null && <span>Dem. máx: {Number(energy.dem_max_p).toFixed(1)} kW</span>}
       </div>
     </div>
+  )
+}
+
+function TrafoConsumersSection({ data }) {
+  return (
+    <div style={s.consumersSection}>
+      <div style={s.consumersHeading}>Consumidores / Ramais</div>
+      <div style={s.consumersGrid}>
+        <div style={s.consumersCard}>
+          <div style={s.consumersNum}>{data.total_consumidores}</div>
+          <div style={s.consumersLabel}>Consumidores</div>
+        </div>
+        <div style={s.consumersCard}>
+          <div style={s.consumersNum}>{data.total_ramais}</div>
+          <div style={s.consumersLabel}>Ramais</div>
+        </div>
+        <div style={s.consumersCard}>
+          <div style={s.consumersNum}>{data.demanda_total_kw.toFixed(1)}</div>
+          <div style={s.consumersLabel}>kW demanda</div>
+        </div>
+        <div style={s.consumersCard}>
+          <div style={s.consumersNum}>{data.consumo_total_mwh.toFixed(1)}</div>
+          <div style={s.consumersLabel}>MWh consumo</div>
+        </div>
+      </div>
+      {data.classes.length > 0 && (
+        <div style={s.consumersClasses}>
+          {data.classes.map(c => <span key={c} style={s.consumersTag}>{c}</span>)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CollapsibleSection({ title, count, children }) {
+  const [open, setOpen] = useState(false)
+  if (!count) return null
+  return (
+    <div style={s.detailSection}>
+      <div style={s.detailHeading} onClick={() => setOpen(!open)}>
+        <span>{title} ({count})</span>
+        <span>{open ? '▾' : '▸'}</span>
+      </div>
+      {open && children}
+    </div>
+  )
+}
+
+function DetailTable({ rows, columns }) {
+  if (!rows || !rows.length) return null
+  return (
+    <table style={s.detailTable}>
+      <thead>
+        <tr>{columns.map(c => <th key={c.key} style={s.detailTh}>{c.label}</th>)}</tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i}>
+            {columns.map(c => <td key={c.key} style={s.detailTd}>{row[c.key] ?? '—'}</td>)}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function SubestacaoDetailsSection({ details }) {
+  if (!details) return null
+  return (
+    <>
+      <CollapsibleSection title="Barras" count={details.barras?.length}>
+        <DetailTable rows={details.barras} columns={[{ key: 'cod_id', label: 'Código' }]} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Bays" count={details.bays?.length}>
+        <DetailTable rows={details.bays} columns={[{ key: 'cod_id', label: 'Código' }]} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Equip. SIA AT" count={details.eq_siat?.length}>
+        <DetailTable rows={details.eq_siat} columns={[{ key: 'cod_id', label: 'Código' }]} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Trafos Auxiliares" count={details.eq_trsx?.length}>
+        <DetailTable rows={details.eq_trsx} columns={[{ key: 'cod_id', label: 'Código' }]} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Circuitos AT" count={details.circuitos_at?.length}>
+        <DetailTable rows={details.circuitos_at} columns={[
+          { key: 'cod_id', label: 'Código' },
+          { key: 'des_circ', label: 'Descrição' },
+          { key: 'ten_nom', label: 'Tensão' },
+        ]} />
+      </CollapsibleSection>
+    </>
+  )
+}
+
+function TrafoDetailsSection({ details }) {
+  if (!details) return null
+  return (
+    <>
+      <CollapsibleSection title="Equipamentos" count={details.equipamentos?.length}>
+        <DetailTable rows={details.equipamentos} columns={[{ key: 'cod_id', label: 'Código' }]} />
+      </CollapsibleSection>
+      {details.iluminacao?.total > 0 && (
+        <div style={s.detailSection}>
+          <div style={s.detailHeading}>
+            <span>Iluminação Pública</span>
+          </div>
+          <div style={s.consumersGrid}>
+            <div style={s.consumersCard}>
+              <div style={s.consumersNum}>{details.iluminacao.total}</div>
+              <div style={s.consumersLabel}>Pontos</div>
+            </div>
+            <div style={s.consumersCard}>
+              <div style={s.consumersNum}>{Number(details.iluminacao.pot_total).toFixed(1)}</div>
+              <div style={s.consumersLabel}>kW total</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function CtmtDetailsSection({ details }) {
+  if (!details) return null
+  return (
+    <>
+      {details.dados && (
+        <>
+          <EnergyChart energy={details.dados} title="Energia Circuito MT (MWh)" color="#F59E0B" />
+          <div style={s.consumersGrid}>
+            <div style={s.consumersCard}>
+              <div style={s.consumersNum}>{details.n_reguladores || 0}</div>
+              <div style={s.consumersLabel}>Reguladores</div>
+            </div>
+            <div style={s.consumersCard}>
+              <div style={s.consumersNum}>{details.n_seccionamento || 0}</div>
+              <div style={s.consumersLabel}>Seccionamentos</div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -243,6 +506,10 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [energy, setEnergy] = useState(null)
+  const [trafoConsumers, setTrafoConsumers] = useState(null)
+  const [subDetails, setSubDetails] = useState(null)
+  const [trafoDetails, setTrafoDetails] = useState(null)
+  const [ctmtDetails, setCtmtDetails] = useState(null)
 
   // Reset stack when target changes from outside (new map click)
   useEffect(() => {
@@ -250,19 +517,31 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
       setNavStack([])
       setData(null)
       setEnergy(null)
+      setTrafoConsumers(null)
+      setSubDetails(null)
+      setTrafoDetails(null)
+      setCtmtDetails(null)
       return
     }
-    setNavStack([{ layerId: target.layerId, featureId: target.featureId }])
+    setNavStack([{ layerId: target.layerId, featureId: target.featureId, codId: target.codId ?? null }])
   }, [target])
 
   // Fetch when navStack top changes
   useEffect(() => {
-    if (navStack.length === 0) { setData(null); setEnergy(null); return }
+    if (navStack.length === 0) {
+      setData(null); setEnergy(null); setTrafoConsumers(null)
+      setSubDetails(null); setTrafoDetails(null); setCtmtDetails(null)
+      return
+    }
     const top = navStack[navStack.length - 1]
     setLoading(true)
     setError(null)
     setData(null)
     setEnergy(null)
+    setTrafoConsumers(null)
+    setSubDetails(null)
+    setTrafoDetails(null)
+    setCtmtDetails(null)
 
     const promise = top.codId
       ? getFeatureByCodId(top.layerId, top.codId)
@@ -271,9 +550,23 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
     promise
       .then(result => {
         setData(result)
+
         // Fetch energy data for subestação
         if (top.layerId === 'subestacao' && result.cod_id) {
           getSubestacaoEnergy(result.cod_id).then(setEnergy).catch(() => null)
+          getSubestacaoDetails(result.cod_id).then(setSubDetails).catch(() => null)
+        }
+
+        // Fetch consumers + details for trafo
+        const trafoCodId = top.codId || result.cod_id
+        if (top.layerId === 'trafo' && trafoCodId) {
+          getTrafoConsumers(trafoCodId).then(setTrafoConsumers).catch(() => null)
+          getTrafoDetails(trafoCodId).then(setTrafoDetails).catch(() => null)
+        }
+
+        // Fetch CTMT details when ctmt field present
+        if (result.ctmt) {
+          getCtmtDetails(result.ctmt).then(setCtmtDetails).catch(() => null)
         }
       })
       .catch(e => setError(e.message))
@@ -308,6 +601,9 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
     })
   }
 
+  // Energy chart for geracao_dist (has ene_01..12)
+  const showGeracaoEnergy = currentLayerId === 'geracao_dist' && data?.pot_inst != null
+
   return (
     <div style={s.panel}>
       <div style={s.header}>
@@ -339,7 +635,12 @@ export default function InfoPanel({ target, onClose, onNavigate }) {
             </div>
           )
         })}
+        {trafoConsumers && <TrafoConsumersSection data={trafoConsumers} />}
         {energy && <EnergyChart energy={energy} />}
+        {showGeracaoEnergy && data && <EnergyChart energy={data} title="Geração Mensal (MWh)" color="#84CC16" />}
+        {subDetails && <SubestacaoDetailsSection details={subDetails} />}
+        {trafoDetails && <TrafoDetailsSection details={trafoDetails} />}
+        {ctmtDetails && <CtmtDetailsSection details={ctmtDetails} />}
       </div>
     </div>
   )

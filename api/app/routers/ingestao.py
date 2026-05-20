@@ -202,7 +202,26 @@ DISTRIBUIDORAS: list[dict] = [
     },
 ]
 
-ENTIDADES_VALIDAS = {"SSDBT", "SSDMT", "UNTRD", "SUB", "UCBT", "UCMT", "UCAT"}
+ENTIDADES_VALIDAS = {
+    # Rede
+    "SSDBT", "SSDMT", "SSDAT",
+    # Instalações
+    "SUB", "UNTRD", "UNTRS", "ARAT", "CONJ",
+    # Consumidores
+    "UCBT", "UCMT", "UCAT",
+    # Equipamentos
+    "EQCR", "PONNOT", "RAMLIG",
+    # Geração
+    "UGBT", "UGMT", "UGAT",
+    # Perdas
+    "UNSEMT", "UNSEAT", "UNCRMT", "UNREMT",
+    # Enriquecimento (sem geometria)
+    "CTMT", "SEGCON", "CTAT", "BAR", "BAY",
+    "EQTRD", "EQTRM", "EQTRS", "EQSIAT", "EQTRSX",
+    "EQRE", "EQSE", "EQME", "PIP",
+    # Dashboard
+    "BE", "EP", "PT", "PNT", "INDGER", "BASE",
+}
 
 
 @router.get("/distribuidoras", response_model=List[DistribuidoraInfo])
