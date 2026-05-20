@@ -26,7 +26,10 @@ const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov
 const LAYER_LABELS = {
   seg_bt: 'Seg. BT', seg_mt: 'Seg. MT', seg_at: 'Seg. AT',
   trafo: 'Trafos', trafo_sub: 'Trafos Sub', subestacao: 'Subestações',
-  consumidor_pj: 'Consumidores', geracao_dist: 'Geração', eq_corte: 'Chaves/Relig.',
+  consumidor_pj: 'Consumidores', geracao_dist: 'Geração',
+  eq_compensador_reativo: 'Comp. Reativo', compensador_reativo_bt: 'Comp. BT',
+  compensador_reativo_at: 'Comp. AT', regulador_at: 'Regulador AT',
+  seccionadora_bt: 'Seccionadora BT', trafo_at: 'Trafo AT',
   ramal_lig: 'Ramais', ponto_notavel: 'Pontos Not.',
 }
 

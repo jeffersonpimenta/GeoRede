@@ -14,7 +14,12 @@ const LAYER_STYLES = {
   // ── Equipamentos ─────────────────────────────────────────
   trafo:         { type: 'circle', color: '#8B5CF6', radius: 5 },
   trafo_sub:     { type: 'circle', color: '#7C3AED', radius: 7,  minzoom: 8 },
-  eq_corte:      { type: 'circle', color: '#FBBF24', radius: 6,  minzoom: 12 },
+  eq_compensador_reativo: { type: 'circle', color: '#FBBF24', radius: 6, minzoom: 12 },
+  compensador_reativo_bt: { type: 'circle', color: '#FCD34D', radius: 5, minzoom: 13 },
+  compensador_reativo_at: { type: 'circle', color: '#F59E0B', radius: 5, minzoom: 11 },
+  regulador_at:        { type: 'circle', color: '#D97706', radius: 6,  minzoom: 11 },
+  seccionadora_bt:     { type: 'circle', color: '#92400E', radius: 4,  minzoom: 13 },
+  trafo_at:            { type: 'circle', color: '#6D28D9', radius: 7,  minzoom: 8 },
   ponto_notavel: { type: 'circle', color: '#F472B6', radius: 3,  minzoom: 14 },
   // ── Instalações ──────────────────────────────────────────
   subestacao:        { type: 'circle', color: '#EF4444', radius: 7 },

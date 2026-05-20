@@ -8,7 +8,12 @@ const LAYER_COLORS = {
   ramal_lig:           '#94A3B8',
   trafo:               '#8B5CF6',
   trafo_sub:           '#7C3AED',
-  eq_corte:            '#FBBF24',
+  trafo_at:            '#6D28D9',
+  eq_compensador_reativo: '#FBBF24',
+  compensador_reativo_bt: '#FCD34D',
+  compensador_reativo_at: '#F59E0B',
+  regulador_at:        '#D97706',
+  seccionadora_bt:     '#92400E',
   ponto_notavel:       '#F472B6',
   subestacao:          '#EF4444',
   area_atendimento:    '#6366F1',
@@ -24,7 +29,7 @@ const LAYER_COLORS = {
 // Agrupamento de layers por categoria
 const LAYER_GROUPS = [
   { label: 'Rede',              ids: ['seg_bt', 'seg_mt', 'seg_at', 'ramal_lig'] },
-  { label: 'Equipamentos',      ids: ['trafo', 'trafo_sub', 'eq_corte', 'ponto_notavel'] },
+  { label: 'Equipamentos',      ids: ['trafo', 'trafo_sub', 'trafo_at', 'eq_compensador_reativo', 'compensador_reativo_bt', 'compensador_reativo_at', 'regulador_at', 'seccionadora_bt', 'ponto_notavel'] },
   { label: 'Instalações',       ids: ['subestacao', 'area_atendimento', 'conjunto'] },
   { label: 'Consumo / Geração', ids: ['consumidor_pj', 'geracao_dist'] },
   { label: 'Perdas',            ids: ['unidade_seg_mt', 'unidade_seg_at', 'unidade_rede_mt', 'unidade_rede_est_mt'] },
