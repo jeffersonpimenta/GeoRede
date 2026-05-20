@@ -36,12 +36,18 @@ ENTIDADE_TABELA: dict[str, str] = {
     "UCMT":   "rede_bt.consumidor_pj",
     "UCAT":   "rede_bt.consumidor_pj",
     # ── Equipamentos / geração (com geometria) ───────────────
-    "EQCR":   "rede_bt.eq_corte",
+    "EQCR":   "rede_bt.eq_compensador_reativo",
     "UGBT":   "rede_bt.geracao_dist",
     "UGMT":   "rede_bt.geracao_dist",
     "UGAT":   "rede_bt.geracao_dist",
     "RAMLIG": "rede_bt.ramal_lig",
     "PONNOT": "rede_bt.ponto_notavel",
+    # ── Entidades geográficas complementares ─────────────────
+    "UNCRBT":  "rede_bt.compensador_reativo_bt",
+    "UNCRAT":  "rede_bt.compensador_reativo_at",
+    "UNREAT":  "rede_bt.regulador_at",
+    "UNSEBT":  "rede_bt.seccionadora_bt",
+    "UNTRAT":  "rede_bt.trafo_at",
     # ── Fase 2 — novas layers geográficas ────────────────────
     "ARAT":   "rede_bt.area_atendimento",
     "CONJ":   "rede_bt.conjunto",
@@ -64,6 +70,10 @@ ENTIDADE_TABELA: dict[str, str] = {
     "EQSE":   "rede_bt.eq_seccionamento",
     "EQME":   "rede_bt.eq_medidor",
     "PIP":    "rede_bt.pip",
+    # ── Entidades não-geográficas complementares ─────────────
+    "EQTRAT": "rede_bt.eq_trafo_at",
+    "EQTRMT": "rede_bt.eq_trafo_mt_dist",
+    "CRVCRG": "rede_bt.curva_carga",
     # ── Fase 4 — dashboard ───────────────────────────────────
     "BE":     "rede_bt.balanco_energia",
     "EP":     "rede_bt.energia_propria",
@@ -95,6 +105,9 @@ _NOGEO_TABELAS: set[str] = {
     "rede_bt.perda_nao_tecnica",
     "rede_bt.indicador_gestao",
     "rede_bt.base_metadata",
+    "rede_bt.eq_trafo_at",
+    "rede_bt.eq_trafo_mt_dist",
+    "rede_bt.curva_carga",
 }
 
 # Entidades que partilham tabela — nível de tensão injectado como campo extra
@@ -102,6 +115,130 @@ _NIVEL_TENSAO_MAP: dict[str, str] = {
     "UGBT": "BT",
     "UGMT": "MT",
     "UGAT": "AT",
+    "UCBT": "BT",
+    "UCMT": "MT",
+    "UCAT": "AT",
+}
+
+# Mapeamento de colunas GDB (padrão BDGD/ANEEL) → colunas PostgreSQL pré-definidas
+# Resolve o mismatch de nomes entre o GDB e o schema do sistema
+COLUMN_MAP: dict[str, dict[str, str]] = {
+    "SSDBT": {
+        "DIST": "distribuidora",
+        "COMP": "comprimento",
+        "TEN_NOM": "tensao_nom",
+        "TIP_CND": "condutor",
+        "SUB": "sub_gd",
+    },
+    "SSDMT": {
+        "DIST": "distribuidora",
+        "COMP": "comprimento",
+        "TEN_NOM": "tensao_nom",
+        "TIP_CND": "condutor",
+        "SUB": "sub_gd",
+    },
+    "SSDAT": {
+        "DIST": "distribuidora",
+        "COMP": "comprimento",
+        "SUB": "sub_gd",
+    },
+    "SUB": {
+        "DIST": "distribuidora",
+        "NOM": "nome",
+        "TEN_PRI": "tensao_prim",
+        "TEN_SEC": "tensao_sec",
+        "POT_NOM": "potencia_mva",
+    },
+    "UNTRD": {
+        "DIST": "distribuidora",
+        "POT_NOM": "potencia_kva",
+        "TEN_PRI": "tensao_prim",
+        "TEN_SEC": "tensao_sec",
+        "MUN": "mun_id",
+        "SUB": "sub_gd",
+    },
+    "UNTRS": {
+        "DIST": "distribuidora",
+        "POT_NOM": "pot_nom",
+        "TEN_PRI": "ten_pri",
+        "TEN_SEC": "ten_sec",
+        "SUB": "sub_gd",
+    },
+    "UCBT": {
+        "DIST": "distribuidora",
+        "UNI_TR_MT": "uni_tr_d",
+        "MUN": "mun_id",
+        "CLAS_SUB": "classe",
+        "CAR_INST": "demanda_kw",
+        "SUB": "sub_gd",
+    },
+    "UCMT": {
+        "DIST": "distribuidora",
+        "UNI_TR_AT": "uni_tr_d",
+        "MUN": "mun_id",
+        "CLAS_SUB": "classe",
+        "DEM_CONT": "demanda_kw",
+        "SUB": "sub_gd",
+    },
+    "UCAT": {
+        "DIST": "distribuidora",
+        "MUN": "mun_id",
+        "CLAS_SUB": "classe",
+        "DEM_CONT": "demanda_kw",
+        "SUB": "sub_gd",
+    },
+    "UGBT": {
+        "DIST": "distribuidora",
+        "UNI_TR_MT": "uni_tr_d",
+        "POT_INST": "pot_inst",
+        "SUB": "sub_gd",
+        "MUN": "mun_id",
+    },
+    "UGMT": {
+        "DIST": "distribuidora",
+        "UNI_TR_MT": "uni_tr_d",
+        "POT_INST": "pot_inst",
+        "SUB": "sub_gd",
+        "MUN": "mun_id",
+    },
+    "UGAT": {
+        "DIST": "distribuidora",
+        "POT_INST": "pot_inst",
+        "SUB": "sub_gd",
+        "MUN": "mun_id",
+    },
+    "EQCR": {
+        "DIST": "distribuidora",
+        "TEN_NOM": "ten_nom",
+    },
+    "RAMLIG": {
+        "DIST": "distribuidora",
+        "UNI_TR_MT": "uni_tr_d",
+        "COMP": "comp",
+    },
+    "PONNOT": {
+        "DIST": "distribuidora",
+    },
+    "CTMT": {
+        "DIST": "distribuidora",
+        "DES_CIRC": "des_circ",
+        "TEN_NOM": "ten_nom",
+    },
+    "CTAT": {
+        "DIST": "distribuidora",
+        "SUB": "sub_gd",
+        "DES_CIRC": "des_circ",
+        "TEN_NOM": "ten_nom",
+    },
+    "SEGCON": {
+        "DIST": "distribuidora",
+        "DESCR": "descr",
+        "RES_POS": "res_pos",
+        "REA_POS": "rea_pos",
+        "CAP_AMP": "cap_amp",
+        "TIP_CND": "tip_cnd",
+        "BIT_CND": "bit_cnd",
+    },
 }
 
 # Nomes alternativos por versão do BDGD (formato antigo → entidade canónica)
@@ -114,7 +251,7 @@ LAYER_ALIASES: dict[str, str] = {
     "UGBT_TAB": "UGBT",    # formato antigo (ex. Enel CE 2017)
     "UGMT_TAB": "UGMT",
     "UGAT_TAB": "UGAT",
-    "UNTRAT":   "UNTRS",   # alias para trafo de subestação
+    # UNTRAT agora é entidade standalone (rede_bt.trafo_at)
 }
 
 
@@ -289,6 +426,7 @@ _POLYGON_TABELAS = {"rede_bt.area_atendimento", "rede_bt.conjunto", "rede_bt.sub
 def _ogr2ogr(
     gdb_path: Path,
     entidade: str,
+    entidade_orig: str,
     tabela: str,
     nivel_tensao: str | None = None,
     force_no_geo: bool = False,
@@ -303,9 +441,17 @@ def _ogr2ogr(
         str(gdb_path),
     ]
 
-    # Para entidades que partilham tabela, injectar campo nivel_tensao via -sql
+    # Construir cláusula -sql com:
+    #   1) Aliases de colunas (COLUMN_MAP) para mapear nomes GDB→PostgreSQL
+    #   2) Injeção de nivel_tensao para entidades que partilham tabela
+    col_map = COLUMN_MAP.get(entidade_orig, {})
+    aliases = [f'"{gdb}" AS {db}' for gdb, db in col_map.items()]
     if nivel_tensao:
-        cmd += ["-sql", f"SELECT *, '{nivel_tensao}' AS nivel_tensao FROM {entidade}"]
+        aliases.append(f"'{nivel_tensao}' AS nivel_tensao")
+
+    if aliases:
+        select_parts = ", ".join(aliases) + ", *"
+        cmd += ["-sql", f"SELECT {select_parts} FROM {entidade}"]
     else:
         cmd.append(entidade)
 
@@ -388,9 +534,9 @@ def ingest_entidade(
         print(f"[ingest] Layer '{entidade}' sem geometria no GDB — usando -nlt NONE", flush=True)
         force_no_geo = True
 
-    # Executar ogr2ogr (injecta nivel_tensao para UGBT/UGMT/UGAT)
+    # Executar ogr2ogr (injecta nivel_tensao para UC*/UG* e aliases de colunas)
     nivel_tensao = _NIVEL_TENSAO_MAP.get(entidade_orig)
-    ok, erro_msg = _ogr2ogr(gdb_path, entidade, tabela, nivel_tensao=nivel_tensao, force_no_geo=force_no_geo)
+    ok, erro_msg = _ogr2ogr(gdb_path, entidade, entidade_orig, tabela, nivel_tensao=nivel_tensao, force_no_geo=force_no_geo)
 
     if ok:
         n = _count_inserted(tabela, job_id)

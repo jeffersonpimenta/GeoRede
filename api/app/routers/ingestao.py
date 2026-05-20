@@ -206,19 +206,23 @@ ENTIDADES_VALIDAS = {
     # Rede
     "SSDBT", "SSDMT", "SSDAT",
     # Instalações
-    "SUB", "UNTRD", "UNTRS", "ARAT", "CONJ",
+    "SUB", "UNTRD", "UNTRS", "UNTRAT", "ARAT", "CONJ",
     # Consumidores
     "UCBT", "UCMT", "UCAT",
     # Equipamentos
     "EQCR", "PONNOT", "RAMLIG",
     # Geração
     "UGBT", "UGMT", "UGAT",
-    # Perdas
-    "UNSEMT", "UNSEAT", "UNCRMT", "UNREMT",
+    # Compensadores / Reguladores / Seccionadoras
+    "UNCRBT", "UNCRMT", "UNCRAT",
+    "UNREMT", "UNREAT",
+    "UNSEBT", "UNSEMT", "UNSEAT",
     # Enriquecimento (sem geometria)
     "CTMT", "SEGCON", "CTAT", "BAR", "BAY",
     "EQTRD", "EQTRM", "EQTRS", "EQSIAT", "EQTRSX",
+    "EQTRAT", "EQTRMT",
     "EQRE", "EQSE", "EQME", "PIP",
+    "CRVCRG",
     # Dashboard
     "BE", "EP", "PT", "PNT", "INDGER", "BASE",
 }
