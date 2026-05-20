@@ -37,9 +37,22 @@ const styles = {
 }
 
 // Expõe addLayer / removeLayer / setFilter ao MapPage via ref
-const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
+const MapView = forwardRef(function MapView({ onFeatureClick, activeToolMode, onToolClick }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
+  const activeToolModeRef = useRef(null)
+  const onToolClickRef = useRef(null)
+
+  // Sync refs (evita re-registrar eventos do mapa)
+  useEffect(() => { activeToolModeRef.current = activeToolMode }, [activeToolMode])
+  useEffect(() => { onToolClickRef.current = onToolClick }, [onToolClick])
+
+  // Cursor crosshair quando ferramenta ativa
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    map.getCanvas().style.cursor = activeToolMode ? 'crosshair' : ''
+  }, [activeToolMode])
 
   useImperativeHandle(ref, () => ({
     addLayer(layerId) {
@@ -112,8 +125,9 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
         })
       }
 
-      // Click → popup
+      // Click → popup (desativado quando ferramenta ativa)
       map.on('click', paintLayerId, (e) => {
+        if (activeToolModeRef.current) return
         const feature = e.features?.[0]
         if (!feature) return
         onFeatureClick?.({
@@ -236,6 +250,104 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
       if (map.getLayer('highlight-layer')) map.removeLayer('highlight-layer')
       if (map.getSource('highlight-source')) map.removeSource('highlight-source')
     },
+
+    // ── Medição ──────────────────────────────────────────────
+    drawMeasureGeometry(geojson) {
+      const map = mapRef.current
+      if (!map) return
+      if (map.getSource('measure-source')) {
+        map.getSource('measure-source').setData(geojson)
+      } else {
+        map.addSource('measure-source', { type: 'geojson', data: geojson })
+        map.addLayer({
+          id: 'measure-fill', type: 'fill', source: 'measure-source',
+          filter: ['==', '$type', 'Polygon'],
+          paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.1 },
+        })
+        map.addLayer({
+          id: 'measure-line', type: 'line', source: 'measure-source',
+          filter: ['any', ['==', '$type', 'LineString'], ['==', '$type', 'Polygon']],
+          paint: { 'line-color': '#3b82f6', 'line-width': 2, 'line-dasharray': [4, 2] },
+        })
+        map.addLayer({
+          id: 'measure-points', type: 'circle', source: 'measure-source',
+          filter: ['==', '$type', 'Point'],
+          paint: {
+            'circle-radius': 5, 'circle-color': '#fff',
+            'circle-stroke-width': 2, 'circle-stroke-color': '#3b82f6',
+          },
+        })
+        map.addLayer({
+          id: 'measure-labels', type: 'symbol', source: 'measure-source',
+          filter: ['has', 'label'],
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-size': 12,
+            'text-offset': [0, -1.2],
+            'text-allow-overlap': true,
+          },
+          paint: {
+            'text-color': '#1e293b',
+            'text-halo-color': '#fff',
+            'text-halo-width': 2,
+          },
+        })
+      }
+    },
+
+    clearMeasureGeometry() {
+      const map = mapRef.current
+      if (!map) return
+      ;['measure-labels', 'measure-points', 'measure-line', 'measure-fill'].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id)
+      })
+      if (map.getSource('measure-source')) map.removeSource('measure-source')
+    },
+
+    // ── Marcador de coordenada ───────────────────────────────
+    drawCoordinateMarker(lngLat) {
+      const map = mapRef.current
+      if (!map) return
+      const data = {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] },
+          properties: {},
+        }],
+      }
+      if (map.getSource('coord-marker-source')) {
+        map.getSource('coord-marker-source').setData(data)
+      } else {
+        map.addSource('coord-marker-source', { type: 'geojson', data })
+        map.addLayer({
+          id: 'coord-marker-outer', type: 'circle', source: 'coord-marker-source',
+          paint: { 'circle-radius': 12, 'circle-color': 'rgba(239,68,68,0.2)', 'circle-stroke-width': 0 },
+        })
+        map.addLayer({
+          id: 'coord-marker-inner', type: 'circle', source: 'coord-marker-source',
+          paint: {
+            'circle-radius': 5, 'circle-color': '#ef4444',
+            'circle-stroke-width': 2, 'circle-stroke-color': '#fff',
+          },
+        })
+      }
+    },
+
+    clearCoordinateMarker() {
+      const map = mapRef.current
+      if (!map) return
+      ;['coord-marker-inner', 'coord-marker-outer'].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id)
+      })
+      if (map.getSource('coord-marker-source')) map.removeSource('coord-marker-source')
+    },
+
+    flyTo(lngLat, zoom) {
+      const map = mapRef.current
+      if (!map) return
+      map.flyTo({ center: [lngLat.lng, lngLat.lat], zoom: zoom || map.getZoom() })
+    },
   }))
 
   useEffect(() => {
@@ -252,8 +364,12 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
       'top-right'
     )
 
-    // Click em área vazia fecha popup
+    // Click: despacha para ferramenta ativa ou fecha popup em área vazia
     map.on('click', (e) => {
+      if (activeToolModeRef.current) {
+        onToolClickRef.current?.({ lngLat: e.lngLat, point: e.point })
+        return
+      }
       const features = map.queryRenderedFeatures(e.point)
       const hitLayer = features.some(f => f.layer.id.startsWith('layer-'))
       if (!hitLayer) onFeatureClick?.(null)
