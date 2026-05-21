@@ -1,7 +1,8 @@
 const tools = [
-  { id: 'distance', label: 'Distância', icon: '📏' },
-  { id: 'area',     label: 'Área',      icon: '⬡' },
-  { id: 'buffer',   label: 'Buffer',    icon: '◎' },
+  { id: 'distance', label: 'Distância',   icon: '📏' },
+  { id: 'area',     label: 'Área',        icon: '⬡' },
+  { id: 'buffer',   label: 'Buffer',      icon: '◎' },
+  { id: 'coords',   label: 'Coordenadas', icon: '📌' },
 ]
 
 const styles = {

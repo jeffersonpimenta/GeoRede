@@ -5,7 +5,9 @@ import InfoPanel from '../components/InfoPanel'
 import SearchBar from '../components/SearchBar'
 import MapToolbar from '../components/MapToolbar'
 import MeasureResultCard from '../components/MeasureResultCard'
+import CoordinatePanel from '../components/CoordinatePanel'
 import useMeasureTool from '../hooks/useMeasureTool'
+import useCoordinateTool from '../hooks/useCoordinateTool'
 
 export default function MapPage() {
   const mapRef = useRef(null)
@@ -18,12 +20,23 @@ export default function MapPage() {
     radius, radiusUnit, setRadius, setRadiusUnit,
   } = useMeasureTool(() => mapRef.current?.getMap())
 
+  const {
+    coordToolActive, setCoordToolActive,
+    coords, setCoordsFromPanel, clearCoords,
+  } = useCoordinateTool(() => mapRef.current?.getMap())
+
   function handleToolChange(tool) {
     if (tool) {
       mapRef.current?.clearHighlight()
       setPanelTarget(null)
     }
-    setActiveTool(tool)
+    if (tool === 'coords') {
+      setActiveTool(null)
+      setCoordToolActive(prev => !prev)
+    } else {
+      setCoordToolActive(false)
+      setActiveTool(tool)
+    }
   }
 
   function handleToggle(layerId) {
@@ -82,9 +95,9 @@ export default function MapPage() {
       <MapView
         ref={mapRef}
         onFeatureClick={handleFeatureClick}
-        activeTool={activeTool}
+        activeTool={coordToolActive ? 'coords' : activeTool}
       />
-      <MapToolbar activeTool={activeTool} onToolChange={handleToolChange} />
+      <MapToolbar activeTool={coordToolActive ? 'coords' : activeTool} onToolChange={handleToolChange} />
       <MeasureResultCard
         activeTool={activeTool}
         measurement={measurement}
@@ -93,6 +106,12 @@ export default function MapPage() {
         onSetRadius={setRadius}
         onSetRadiusUnit={setRadiusUnit}
         onClear={clearMeasurement}
+      />
+      <CoordinatePanel
+        active={coordToolActive}
+        coords={coords}
+        onCoordsChange={setCoordsFromPanel}
+        onClear={clearCoords}
       />
       <LayerPanel
         activeLayers={activeLayers}
