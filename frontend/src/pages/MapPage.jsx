@@ -3,11 +3,28 @@ import MapView from '../components/MapView'
 import LayerPanel from '../components/LayerPanel'
 import InfoPanel from '../components/InfoPanel'
 import SearchBar from '../components/SearchBar'
+import MapToolbar from '../components/MapToolbar'
+import MeasureResultCard from '../components/MeasureResultCard'
+import useMeasureTool from '../hooks/useMeasureTool'
 
 export default function MapPage() {
   const mapRef = useRef(null)
   const [activeLayers, setActiveLayers] = useState([])
   const [panelTarget, setPanelTarget] = useState(null)
+
+  const {
+    activeTool, setActiveTool,
+    measurement, clearMeasurement,
+    radius, radiusUnit, setRadius, setRadiusUnit,
+  } = useMeasureTool(() => mapRef.current?.getMap())
+
+  function handleToolChange(tool) {
+    if (tool) {
+      mapRef.current?.clearHighlight()
+      setPanelTarget(null)
+    }
+    setActiveTool(tool)
+  }
 
   function handleToggle(layerId) {
     if (activeLayers.includes(layerId)) {
@@ -65,6 +82,17 @@ export default function MapPage() {
       <MapView
         ref={mapRef}
         onFeatureClick={handleFeatureClick}
+        activeTool={activeTool}
+      />
+      <MapToolbar activeTool={activeTool} onToolChange={handleToolChange} />
+      <MeasureResultCard
+        activeTool={activeTool}
+        measurement={measurement}
+        radius={radius}
+        radiusUnit={radiusUnit}
+        onSetRadius={setRadius}
+        onSetRadiusUnit={setRadiusUnit}
+        onClear={clearMeasurement}
       />
       <LayerPanel
         activeLayers={activeLayers}

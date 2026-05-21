@@ -37,11 +37,17 @@ const styles = {
 }
 
 // Expõe addLayer / removeLayer / setFilter ao MapPage via ref
-const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
+const MapView = forwardRef(function MapView({ onFeatureClick, activeTool }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
+  const activeToolRef = useRef(null)
+
+  // Sync ref so handlers can read without re-registering
+  useEffect(() => { activeToolRef.current = activeTool }, [activeTool])
 
   useImperativeHandle(ref, () => ({
+    getMap() { return mapRef.current },
+
     addLayer(layerId) {
       const map = mapRef.current
       if (!map) return
@@ -112,8 +118,9 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
         })
       }
 
-      // Click → popup
+      // Click → popup (skip when measure tool active)
       map.on('click', paintLayerId, (e) => {
+        if (activeToolRef.current) return
         const feature = e.features?.[0]
         if (!feature) return
         onFeatureClick?.({
@@ -125,11 +132,13 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
         })
       })
 
-      // Cursor pointer no hover
+      // Cursor pointer no hover (skip when measure tool active)
       map.on('mouseenter', paintLayerId, () => {
+        if (activeToolRef.current) return
         map.getCanvas().style.cursor = 'pointer'
       })
       map.on('mouseleave', paintLayerId, () => {
+        if (activeToolRef.current) return
         map.getCanvas().style.cursor = ''
       })
     },
@@ -252,8 +261,9 @@ const MapView = forwardRef(function MapView({ onFeatureClick }, ref) {
       'top-right'
     )
 
-    // Click em área vazia fecha popup
+    // Click em área vazia fecha popup (skip when measure tool active)
     map.on('click', (e) => {
+      if (activeToolRef.current) return
       const features = map.queryRenderedFeatures(e.point)
       const hitLayer = features.some(f => f.layer.id.startsWith('layer-'))
       if (!hitLayer) onFeatureClick?.(null)
